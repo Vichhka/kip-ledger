@@ -908,7 +908,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   // exchange details
   const ex=list.filter(e=>e.orig);
   if(ex.length){
-    y+=40;if(y>H-360){page();band(true);y=170}
+    y+=40;if(y>H-520){page();band(true);y=170}
     section("Exchange details");
     const groups={};ex.forEach(e=>{const k=e.orig.currency+">"+e.currency;(groups[k]=groups[k]||[]).push(e)});
     const keys=Object.keys(groups);
@@ -931,16 +931,30 @@ $("expPdf").onclick=()=>busy(async()=>{
       txt(rateText(e),M+776,y,{size:17,mono:true,align:"right",color:MUTE});
       txt(fmt(e.amount,e.currency),W-M-14,y,{size:19,w:700,mono:true,align:"right",color:CURCOL[e.currency]});y+=rowH});
   }
+  // receipts: 3 per A4 page, side by side, each with a fully wrapped caption
+  const overlays=[];
+  const GAP=24,colW=(W-2*M-2*GAP)/3,capTop=140,capLine=24,capMaxLines=7,imgTop=capTop+capMaxLines*capLine+14,imgMaxH=H-imgTop-90;
   for(let i=0;i<imgs.length;i++){const {e,pid,k,n}=imgs[i];expMsg("Adding image "+(i+1)+" of "+imgs.length+"…");
-    if(i%2===0){page();band(true);txt("IMAGES · "+monthName.toUpperCase(),W-M,62,{size:18,w:700,color:"#A9BBD3",align:"right"})}
-    const top=i%2===0?130:H/2+20,boxH=i%2===0?H/2-150:H/2-M-70;
-    txt("#"+rnum[e.id]+(n>1?" ("+(k+1)+"/"+n+")":"")+"  "+new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" · "+e.cat+" · "+(e.note||"")+" · "+fmt(e.amount,e.currency)+(e.orig?" (paid "+fmt(e.orig.amount,e.orig.currency)+" · "+rateText(e)+")":""),M,top+24,{size:22,w:600,max:W-2*M});
-    const im=await bitmapOf(pid);
-    if(im){const k=Math.min((W-2*M)/im.width,(boxH-50)/im.height);x.drawImage(im,M,top+44,im.width*k,im.height*k);x.strokeStyle="#D8DEE6";x.lineWidth=2;x.strokeRect(M,top+44,im.width*k,im.height*k)}
-    else txt("Image could not be loaded.",M,top+80,{size:20,color:"#B8402E"})}
+    const slot=i%3;
+    if(slot===0){page();band(true);txt("RECEIPTS · "+monthName.toUpperCase(),W-M,62,{size:18,w:700,color:"#A9BBD3",align:"right"})}
+    const x0=M+slot*(colW+GAP);
+    // caption: number + date on the first line, then the details wrapped to the column width
+    txt("#"+rnum[e.id]+(n>1?"  ("+(k+1)+"/"+n+")":"")+"  ·  "+new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"}),x0,capTop,{size:19,w:700,color:NAVY});
+    txt(fmt(e.amount,e.currency),x0+colW,capTop,{size:19,w:700,mono:true,align:"right",color:CURCOL[e.currency]});
+    const detail=e.cat+" · "+(e.note||"—")+(e.orig?" · paid "+fmt(e.orig.amount,e.orig.currency)+" · "+rateText(e):"");
+    let lines=wrap(detail,colW,16);if(lines.length>capMaxLines-1){lines=lines.slice(0,capMaxLines-1);lines[lines.length-1]=lines[lines.length-1].replace(/.?$/,"…")}
+    lines.forEach((l,j)=>txt(l,x0,capTop+capLine*(j+1)+2,{size:16,color:INK}));
+    const im=await bitmapOf(pid),blob=await S.getPhoto(pid).catch(()=>null);
+    if(im&&blob){const sc=Math.min(colW/im.width,imgMaxH/im.height),w=im.width*sc,h=im.height*sc;
+      x.fillStyle="#F5F7FA";x.fillRect(x0,imgTop,w,h);x.strokeStyle="#D8DEE6";x.lineWidth=2;x.strokeRect(x0-1,imgTop-1,w+2,h+2);
+      overlays.push({page:pages.length-1,blob,x:x0,y:imgTop,w,h})}
+    else txt("Image could not be loaded.",x0,imgTop+30,{size:18,color:"#B8402E"})}
   const {jsPDF}=window.jspdf;const pdf=new jsPDF({unit:"pt",format:"a4",compress:true});
   pages.forEach((c,i)=>{x=c.getContext("2d");txt("ProTracker · "+monthName+" · page "+(i+1)+" of "+pages.length,W-M,H-50,{size:16,color:"#5E6B7A",align:"right"});
     if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",0.86),"JPEG",0,0,595.28,841.89)});
+  const kpt=595.28/W;
+  for(const o of overlays){const url=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(o.blob)});
+    pdf.setPage(o.page+1);pdf.addImage(url,"JPEG",o.x*kpt,o.y*kpt,o.w*kpt,o.h*kpt,undefined,"FAST")}
   await deliver("Expense report "+monthKey(view)+".pdf",pdf.output("blob"),expMsg);
 });
 
