@@ -142,6 +142,14 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 .viewer button{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));background:#fff;color:#000;border:0;border-radius:99px;width:40px;height:40px;font-size:1.2rem;cursor:pointer}
 .backup{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .backup input{position:absolute;width:1px;height:1px;opacity:0}
+.acct{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.acctrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.accttext{display:grid;gap:2px;min-width:0;flex:1 1 240px}
+.accttext span{font-size:.82rem;color:var(--muted)}
+.acctbtns{display:flex;flex-wrap:wrap;gap:8px}
+.primary-sm{background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:.88rem}
+.eform{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+.eform input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;flex:1 1 180px;min-width:0;font-size:16px}
 .install{border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:.88rem;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}.spin{animation:none}}
 </style>
@@ -169,6 +177,27 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     <span id="installText">Install Kip Ledger: in Safari tap Share, then <strong>Add to Home Screen</strong>. It then opens with no internet.</span>
     <button class="ghost" id="installBtn" type="button" hidden>Install app</button>
   </div>
+
+  <section class="acct" id="acct" aria-label="Account and sync">
+    <div class="acctrow" id="acctOut">
+      <div class="accttext"><strong>Sync your phone and laptop</strong><span>Sign in once on each device. Works offline and syncs when you're back online.</span></div>
+      <div class="acctbtns"><button class="primary-sm" id="gBtn" type="button">Sign in with Google</button><button class="ghost" id="eBtn" type="button">Use email &amp; password</button></div>
+      <form class="eform" id="eForm" hidden autocomplete="on">
+        <input id="eMail" type="email" autocomplete="username" placeholder="Email" aria-label="Email">
+        <input id="ePass" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+        <button class="primary-sm" type="submit">Sign in</button><button class="ghost" id="eCreate" type="button">Create account</button>
+      </form>
+    </div>
+    <div class="acctrow" id="acctIn" hidden>
+      <div class="accttext"><strong id="acctWho">Synced</strong><span>Expenses and images sync between every device you sign in on.</span></div>
+      <div class="acctbtns"><button class="ghost" id="pwBtn" type="button" hidden>Add a password (for iPhone)</button><button class="ghost" id="outBtn" type="button">Sign out</button></div>
+      <form class="eform" id="pwForm" hidden>
+        <input id="newPass" type="password" autocomplete="new-password" placeholder="New password (6+ characters)" aria-label="New password">
+        <button class="primary-sm" type="submit">Save password</button>
+      </form>
+    </div>
+    <div class="msg" id="acctMsg" role="status"></div>
+  </section>
 
   <div class="rates">
     <span>Rates</span>
@@ -231,7 +260,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 
       <section class="card" aria-label="Backup">
         <h2>Backup</h2>
-        <p class="status" style="margin:0">Your expenses and images are stored only on this phone. Make a backup now and then, and keep it in Files, iCloud Drive or Telegram.</p>
+        <p class="status" style="margin:0">When you are signed in, your expenses are kept in your account. A backup file is still a good extra copy: keep it in Files, iCloud Drive or Telegram.</p>
         <div class="backup">
           <button class="ghost" id="backupBtn" type="button">Make backup</button>
           <label class="ghost" for="restoreFile" style="position:relative">Restore backup<input type="file" id="restoreFile" accept=".zip,application/zip"></label>
@@ -266,6 +295,9 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 </div>
 <div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Receipt image"><button type="button" id="viewerClose" aria-label="Close">×</button></div>
 
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-auth-compat.js"></script>
+<script src="firebase-firestore-compat.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="jszip.min.js"></script>
 <script src="tesseract.min.js"></script>
@@ -289,7 +321,7 @@ function db(){if(!dbp)dbp=new Promise((res,rej)=>{const r=indexedDB.open("kipled
     if(!d.objectStoreNames.contains("photos"))d.createObjectStore("photos");if(!d.objectStoreNames.contains("settings"))d.createObjectStore("settings")};
   r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});return dbp}
 async function run(store,mode,fn){const d=await db();return new Promise((res,rej)=>{const t=d.transaction(store,mode);const q=fn(t.objectStore(store));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
-const S={
+const LOCAL={
   all:()=>run("entries","readonly",s=>s.getAll()),
   put:e=>run("entries","readwrite",s=>s.put(e)),
   del:id=>run("entries","readwrite",s=>s.delete(id)),
@@ -301,6 +333,35 @@ const S={
   getSettings:()=>run("settings","readonly",s=>s.get("s")),
   putSettings:v=>run("settings","readwrite",s=>s.put(v,"s"))
 };
+let S=LOCAL;
+
+// ---------- cloud sync (Firebase, free Spark plan) ----------
+const FB_CONFIG={apiKey:"AIzaSyBmQIeNOJEaksY4qZpizroWe-tju6tay2w",authDomain:"kip-ledger.firebaseapp.com",projectId:"kip-ledger",
+  storageBucket:"kip-ledger.firebasestorage.app",messagingSenderId:"16996076721",appId:"1:16996076721:web:55675cba8af62eaa3ea690"};
+let fdb=null,fauth=null,unsubs=[],cloudPending=false,cloudFromCache=true;
+const blobToB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+function b64ToBlob(v){const bin=atob(v);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:"image/jpeg"})}
+function reencode(blob,max,q){return new Promise(res=>{const u=URL.createObjectURL(blob);const img=new Image();
+  img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>res(b||blob),"image/jpeg",q)};
+  img.onerror=()=>{URL.revokeObjectURL(u);res(blob)};img.src=u})}
+async function fitPhoto(b){ // a database document holds at most 1 MB, so keep each image well under that
+  if(b.size<=550000)return b;let out=await reencode(b,1280,0.72);if(out.size>550000)out=await reencode(b,1000,0.62);if(out.size>550000)out=await reencode(b,800,0.55);return out}
+function syncFail(e){console.warn(e);acctMsg("Couldn't sync a change"+(e&&e.code?" ("+e.code+")":"")+". It stays on this device; try signing in again.",true)}
+const fire=p=>{p.catch(syncFail);return Promise.resolve()};
+function cloudStore(uid){
+  const base=fdb.collection("users").doc(uid);
+  const E=base.collection("entries"),P=base.collection("photos"),M=base.collection("meta").doc("settings");
+  return{cloud:true,E,M,
+    all:async()=>(await E.get()).docs.map(d=>d.data()),
+    put:e=>fire(E.doc(e.id).set(JSON.parse(JSON.stringify(e)))),
+    del:id=>fire(E.doc(id).delete()),
+    getPhoto:async id=>{try{const d=await P.doc(id).get();const v=d.exists&&d.data().data;return v?b64ToBlob(v):null}catch(e){return null}},
+    putPhoto:async(id,b)=>{const v=await blobToB64(await fitPhoto(b));return fire(P.doc(id).set({data:v,ts:Date.now()}))},
+    delPhoto:id=>fire(P.doc(id).delete()),
+    getSettings:async()=>{try{const d=await M.get();return d.exists?d.data():null}catch(e){return null}},
+    putSettings:v=>fire(M.set(JSON.parse(JSON.stringify(v))))
+  }}
 
 let entries=[];
 let settings=normSettings(null);
@@ -504,7 +565,7 @@ function render(){
         entries=entries.filter(x=>x.id!==e.id);render()};
       g.appendChild(r)});
     L.appendChild(g)});
-  $("status").textContent=entries.length+" entries saved on this phone";
+  $("status").textContent=entries.length+" entries · "+(S.cloud?(navigator.onLine===false?"offline, changes will sync when you're back online":cloudPending?"syncing…":cloudFromCache?"connecting…":"synced with your account"):"saved on this device only");
 }
 function drawChart(list,days,isNow){
   const per=new Array(days).fill(0);list.forEach(e=>{per[+e.date.slice(8)-1]+=fromLAK(toLAK(e))});
@@ -646,13 +707,82 @@ $("installBtn").onclick=async()=>{if(!deferred)return;deferred.prompt();await de
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
-// ---------- start ----------
-render();
-(async()=>{
+// ---------- account + sync ----------
+function acctMsg(t,err){$("acctMsg").textContent=t||"";$("acctMsg").className="msg"+(err?" err":"")}
+const AUTH_ERR={"auth/invalid-credential":"Wrong email or password.","auth/wrong-password":"Wrong email or password.","auth/user-not-found":"No account with that email yet. Tap Create account.",
+  "auth/email-already-in-use":"This email already has an account. Tap Sign in. If you first signed in with Google, sign in with Google once on your laptop and tap Add a password.",
+  "auth/weak-password":"Use a password of at least 6 characters.","auth/invalid-email":"That email address doesn't look right.",
+  "auth/network-request-failed":"No internet. Signing in needs internet the first time on each device.","auth/too-many-requests":"Too many tries. Wait a few minutes and try again.",
+  "auth/popup-closed-by-user":"Sign-in was closed before it finished.","auth/cancelled-popup-request":"Sign-in was closed before it finished.",
+  "auth/requires-recent-login":"For safety, sign out and sign in again, then add the password.","auth/provider-already-linked":"This account already has a password.",
+  "auth/credential-already-in-use":"Another account already uses this email with a password."};
+const authErr=e=>AUTH_ERR[e&&e.code]||((e&&e.code)?"Sign-in failed ("+e.code+").":"Sign-in failed. Try again.");
+function stopSync(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[]}
+async function useLocal(){
+  stopSync();S=LOCAL;$("acctOut").hidden=false;$("acctIn").hidden=true;
   try{settings=normSettings(await S.getSettings());entries=await S.all()}
   catch(e){$("status").textContent="This browser is blocking storage (private mode?). Entries won't be kept."}
   render();
-})();
+}
+async function useCloud(u){
+  stopSync();S=cloudStore(u.uid);entries=[];cloudFromCache=true;
+  $("acctOut").hidden=true;$("acctIn").hidden=false;$("eForm").hidden=true;
+  $("acctWho").textContent="Synced as "+(u.email||"your account");
+  $("pwBtn").hidden=!u.email||(u.providerData||[]).some(p=>p.providerId==="password");
+  unsubs.push(S.E.onSnapshot({includeMetadataChanges:true},snap=>{
+    snap.docChanges().forEach(c=>{if(c.type!=="added")forgetURL(c.doc.id)});
+    entries=snap.docs.map(d=>d.data());cloudPending=snap.metadata.hasPendingWrites;cloudFromCache=snap.metadata.fromCache;render()},syncFail));
+  unsubs.push(S.M.onSnapshot(d=>{if(d.exists){settings=normSettings(d.data());render()}},()=>{}));
+  render();
+  // move anything saved on this device before signing in into the account (same ids, so nothing doubles)
+  try{
+    const local=await LOCAL.all();
+    if(local.length){
+      acctMsg("Moving "+local.length+" expenses from this device into your account…");
+      const ls=await LOCAL.getSettings().catch(()=>null);
+      if(ls&&!(await S.getSettings()))await S.putSettings(normSettings(ls));
+      for(const e of local){await S.put(e);if(e.hasPhoto){const b=await LOCAL.getPhoto(e.id).catch(()=>null);if(b)await S.putPhoto(e.id,b)}}
+      if(navigator.onLine!==false){await fdb.waitForPendingWrites();await LOCAL.clear();await LOCAL.clearPhotos();acctMsg("Moved "+local.length+" expenses into your account.")}
+      else acctMsg("Your "+local.length+" expenses will move into your account when you're back online.");
+    }
+  }catch(e){console.warn(e)}
+}
+$("gBtn").onclick=async()=>{acctMsg("Opening Google sign-in…");
+  try{await fauth.signInWithPopup(new firebase.auth.GoogleAuthProvider());acctMsg("")}
+  catch(e){acctMsg(/popup-blocked|operation-not-supported|web-storage-unsupported|internal-error/.test(e&&e.code||"")?
+    "Google sign-in can't open here. Tap Use email & password instead. (If you made your account with Google, first sign in with Google on your laptop and tap Add a password.)":authErr(e),true)}};
+$("eBtn").onclick=()=>{$("eForm").hidden=!$("eForm").hidden;if(!$("eForm").hidden)$("eMail").focus()};
+async function emailGo(create){const em=$("eMail").value.trim(),pw=$("ePass").value;
+  if(!em||!pw){acctMsg("Enter your email and a password.",true);return}
+  acctMsg(create?"Creating your account…":"Signing in…");
+  try{create?await fauth.createUserWithEmailAndPassword(em,pw):await fauth.signInWithEmailAndPassword(em,pw);$("ePass").value="";acctMsg("")}
+  catch(e){acctMsg(authErr(e),true)}}
+$("eForm").addEventListener("submit",e=>{e.preventDefault();emailGo(false)});
+$("eCreate").onclick=()=>emailGo(true);
+$("pwBtn").onclick=()=>{$("pwForm").hidden=!$("pwForm").hidden;if(!$("pwForm").hidden)$("newPass").focus()};
+$("pwForm").addEventListener("submit",async e=>{e.preventDefault();const u=fauth.currentUser;const pw=$("newPass").value;
+  if(!u||!u.email)return;if(pw.length<6){acctMsg("Use a password of at least 6 characters.",true);return}
+  try{await u.linkWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,pw));$("newPass").value="";$("pwForm").hidden=true;$("pwBtn").hidden=true;
+    acctMsg("Password added. On your iPhone, tap Use email & password and sign in with "+u.email+".")}
+  catch(err){acctMsg(authErr(err),true)}});
+$("outBtn").onclick=async()=>{
+  if($("outBtn").dataset.armed!=="1"){$("outBtn").dataset.armed="1";$("outBtn").textContent="Tap again to sign out";setTimeout(()=>{$("outBtn").dataset.armed="";$("outBtn").textContent="Sign out"},4000);return}
+  stopSync();try{await fauth.signOut()}catch(e){}
+  try{await fdb.terminate();await fdb.clearPersistence()}catch(e){}
+  location.reload()};
+window.addEventListener("online",render);window.addEventListener("offline",render);
+
+// ---------- start ----------
+render();
+if(window.firebase){
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    fdb=firebase.firestore();
+    fdb.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn("offline cache unavailable",e&&e.code));
+    fauth=firebase.auth();
+    fauth.onAuthStateChanged(u=>{u?useCloud(u):useLocal()});
+  }catch(e){console.warn(e);$("acct").hidden=true;useLocal()}
+}else{$("acct").hidden=true;useLocal()}
 })();
 </script>
 </body>

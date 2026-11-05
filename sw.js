@@ -1,5 +1,5 @@
 // Kip Ledger offline cache. Bump VERSION whenever any app file changes.
-const VERSION = "kipledger-v3";
+const VERSION = "kipledger-v4";
 const FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,9 @@ const FILES = [
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
+  "./firebase-app-compat.js",
+  "./firebase-auth-compat.js",
+  "./firebase-firestore-compat.js",
   "./jspdf.umd.min.js",
   "./jszip.min.js",
   "./tesseract.min.js",
