@@ -220,6 +220,21 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 .barline .name{grid-area:name}.barline .v{grid-area:v;font-weight:600;white-space:normal;text-align:right}.barline .t{grid-area:bar;height:8px}
 .bars{gap:12px}
 .card .rates{margin-top:2px}
+.amt2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:420px){.amt2{grid-template-columns:1fr}}
+.acol{display:grid;gap:6px;min-width:0}
+.acol>label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.acol>label em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.acol select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;width:100%;min-width:0;font-size:16px}
+.acol .amountrow input{font-size:1.5rem}
+.acol.ex{padding-left:14px;border-left:2px dashed var(--line)}
+@media (max-width:420px){.acol.ex{padding-left:0;border-left:0;padding-top:10px;border-top:2px dashed var(--line)}}
+.acol.ex.on .amountrow{border-color:var(--gold)}
+.acol.ex.on>label{color:var(--gold)}
+#exHint{margin:-4px 0 0;font-size:.78rem;color:var(--muted)}
+.paidnote{color:var(--muted);font-size:.78rem}
+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:600px){.stats{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -267,7 +282,6 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
   <section class="stats" aria-label="Summary">
     <div class="stat"><div class="eyebrow">Today</div><div class="curs" id="sToday">₭0</div><div class="mix" id="sTodayTot"></div></div>
     <div class="stat feature"><div class="eyebrow" id="sMonthLbl">This month</div><div class="curs" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
-    <div class="stat"><div class="eyebrow">Daily average</div><div class="curs" id="sAvg"></div></div>
     <div class="stat budgetbar">
       <div class="budgetrow"><span id="budgetText">No monthly budget set</span><button class="linkbtn" id="editBudget" type="button">Set budget</button></div>
       <div class="track"><div class="fill" id="budgetFill" style="width:0%"></div></div>
@@ -288,7 +302,19 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
             <label class="scan" for="photoUp">🖼 Upload image<input type="file" id="photoUp" accept="image/*"></label>
             <div class="preview" id="preview" hidden><img id="previewImg" alt="Receipt preview"><span id="previewText"></span><button type="button" class="del" id="clearPhoto" aria-label="Remove image">×</button></div>
           </div>
-          <div class="amountrow"><span class="cur" id="curSym">₭</span><input id="amount" inputmode="decimal" placeholder="0" aria-label="Amount"></div>
+          <div class="amt2">
+            <div class="acol">
+              <label for="amount">You paid</label>
+              <div class="amountrow"><span class="cur" id="curSym">₭</span><input id="amount" inputmode="decimal" placeholder="0" aria-label="Amount you paid"></div>
+              <select id="currency" aria-label="Currency you paid"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select>
+            </div>
+            <div class="acol ex">
+              <label for="exAmount">Exchanged to <em>(optional)</em></label>
+              <div class="amountrow"><span class="cur" id="exSym">₭</span><input id="exAmount" inputmode="decimal" placeholder="0" aria-label="Amount after exchange"></div>
+              <select id="exCur" aria-label="Currency after exchange"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select>
+            </div>
+          </div>
+          <p class="hint" id="exHint">Fill "Exchanged to" when you changed money, e.g. ฿5,000 → ₭350,000. That amount counts in your totals.</p>
           <div class="chips" id="quick"></div>
           <div class="cats" id="cats" role="group" aria-label="Category"></div>
           <div class="catbar"><button class="linkbtn" id="editCatsBtn" type="button">Edit categories</button></div>
@@ -303,21 +329,13 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
             <div class="field"><label for="date">Date</label><input type="date" id="date"></div>
             <div class="field"><label for="note">Note</label><input id="note" placeholder="e.g. lunch, fuel, phone top-up" maxlength="80"></div>
           </div>
-          <div class="row2">
-            <div class="field"><label for="pay">Paid with</label>
-              <select id="pay"><option>Cash</option><option>BCEL One</option><option>Bank card</option><option>Other</option></select></div>
-            <div class="field"><label for="currency">Currency</label>
-              <select id="currency"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
-          </div>
+          <div class="field"><label for="pay">Paid with</label>
+            <select id="pay"><option>Cash</option><option>BCEL One</option><option>Bank card</option><option>Other</option></select></div>
           <div class="actions"><button class="primary" type="submit" id="submitBtn">Add expense</button><button class="ghost" type="button" id="cancelEdit" hidden>Cancel</button></div>
           <div class="msg" id="msg" role="status"></div>
         </form>
       </section>
 
-      <section class="card" aria-label="By category">
-        <h2>Where it went</h2>
-        <div class="bars" id="catBars"></div>
-      </section>
 
       <section class="card" aria-label="Backup">
         <h2>Settings &amp; backup</h2>
@@ -333,7 +351,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
             <button class="ghost" id="cancelRates" type="button">Cancel</button>
           </div>
         </div>
-        <p class="status" style="margin:0">Rates are only used for the spending chart and the monthly budget. Your totals and reports never convert currencies.</p>
+        <p class="status" style="margin:0">Rates are only used for the monthly budget. Your totals and reports never convert currencies.</p>
         <p class="status" style="margin:0">When you are signed in, your expenses are kept in your account. A backup file is still a good extra copy: keep it in Files, iCloud Drive or Telegram.</p>
         <div class="backup">
           <button class="ghost" id="backupBtn" type="button">Make backup</button>
@@ -344,10 +362,6 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     </div>
 
     <div class="col">
-      <section class="card" aria-label="Daily spending chart">
-        <h2>Spending by day</h2>
-        <div class="chartwrap" id="chart"></div>
-      </section>
 
       <section class="card" aria-label="Entries">
         <div class="tools">
@@ -465,9 +479,13 @@ function drawCats(){$("cats").innerHTML="";const list=CATS.slice();if(cat&&!list
   b.innerHTML='<span class="dot" style="background:var('+v+')"></span><span></span>';b.lastChild.textContent=n;b.onclick=()=>{cat=n;drawCats()};$("cats").appendChild(b)})}
 function drawQuick(){$("quick").innerHTML="";$("curSym").textContent=SYM[cur];QUICK[cur].forEach(v=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent="+"+fmt(v,cur);
   b.onclick=()=>{const now=parseNum($("amount").value)||0;$("amount").value=(now+v).toLocaleString("en-US");$("amount").focus()};$("quick").appendChild(b)})}
-$("currency").onchange=e=>{cur=e.target.value;drawQuick()};
+$("currency").onchange=e=>{cur=e.target.value;drawQuick();exDefault()};
+function exDefault(){if($("exAmount").value)return;if($("exCur").value===cur)$("exCur").value=cur==="LAK"?"THB":"LAK";$("exSym").textContent=SYM[$("exCur").value]}
+function exMark(){$("exSym").textContent=SYM[$("exCur").value];$("exAmount").closest(".acol").classList.toggle("on",parseNum($("exAmount").value)>0)}
+$("exCur").onchange=()=>{exMark();const v=parseNum($("exAmount").value);if($("exCur").value==="LAK"&&isFinite(v))$("exAmount").value=Math.round(v).toLocaleString("en-US")};
+$("exAmount").addEventListener("input",e=>{if($("exCur").value==="LAK"){const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")}exMark()});
 $("amount").addEventListener("input",e=>{if(cur!=="LAK")return;const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")});
-drawCats();drawQuick();
+drawCats();drawQuick();$("exCur").value="THB";exDefault();exMark();
 function showMsg(t,err){$("msg").textContent=t;$("msg").className="msg"+(err?" err":"")}
 
 // ---------- images + offline receipt reading ----------
@@ -493,8 +511,12 @@ async function onImage(input){
 // ---------- add / edit ----------
 function startEdit(e){
   editing=e;dropPhoto=false;photo=null;
-  cur=e.currency;$("currency").value=cur;drawQuick();
-  $("amount").value=cur==="LAK"?Math.round(e.amount).toLocaleString("en-US"):String(e.amount);
+  const paid=e.orig||{amount:e.amount,currency:e.currency};
+  cur=paid.currency;$("currency").value=cur;drawQuick();
+  $("amount").value=cur==="LAK"?Math.round(paid.amount).toLocaleString("en-US"):String(paid.amount);
+  if(e.orig){$("exCur").value=e.currency;$("exAmount").value=e.currency==="LAK"?Math.round(e.amount).toLocaleString("en-US"):String(e.amount)}
+  else{$("exAmount").value="";exDefault()}
+  exMark();
   cat=e.cat;drawCats();$("note").value=e.note||"";$("date").value=e.date;$("pay").value=e.pay||"Cash";
   if(e.hasPhoto){photoURL(e.id).then(u=>{if(editing===e&&u){$("previewImg").src=u;$("preview").hidden=false;$("previewText").textContent="Current image. Take or upload a new one to replace it, or × to remove it."}})}
   else $("preview").hidden=true;
@@ -502,7 +524,7 @@ function startEdit(e){
   $("addCard").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});render();
 }
 function endEdit(){editing=null;dropPhoto=false;$("formTitle").textContent="Add an expense";$("submitBtn").textContent="Add expense";$("cancelEdit").hidden=true}
-function resetForm(){endEdit();clearPhoto();$("amount").value="";$("note").value=""}
+function resetForm(){endEdit();clearPhoto();$("amount").value="";$("note").value="";$("exAmount").value="";exDefault();exMark()}
 $("cancelEdit").onclick=()=>{resetForm();$("date").value=todayISO();showMsg("");render()};
 
 $("addForm").addEventListener("submit",async ev=>{
@@ -512,14 +534,17 @@ $("addForm").addEventListener("submit",async ev=>{
   if(!$("date").value){showMsg("Pick a date.",true);return}
   const ed=editing;
   const id=ed?ed.id:"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const entry={id,amount,currency:cur,cat,note:$("note").value.trim(),date:$("date").value,pay:$("pay").value,ts:ed?ed.ts:Date.now(),hasPhoto:!!(photo||(ed&&ed.hasPhoto&&!dropPhoto))};
+  const exAmt=parseNum($("exAmount").value),exC=$("exCur").value;
+  if(exAmt>0&&exC===cur){showMsg("Pick a different currency for \"Exchanged to\", or leave it empty.",true);return}
+  const counted=exAmt>0?{amount:exAmt,currency:exC,orig:{amount,currency:cur}}:{amount,currency:cur};
+  const entry={id,...counted,cat,note:$("note").value.trim(),date:$("date").value,pay:$("pay").value,ts:ed?ed.ts:Date.now(),hasPhoto:!!(photo||(ed&&ed.hasPhoto&&!dropPhoto))};
   try{
     if(photo){await S.putPhoto(id,photo);forgetURL(id)}
     else if(ed&&ed.hasPhoto&&dropPhoto){await S.delPhoto(id);forgetURL(id)}
     await S.put(entry);
   }catch(e){showMsg(e&&e.name==="QuotaExceededError"?"Phone storage is full. Delete some old entries or images.":"Couldn't save on this phone. Try again.",true);return}
   entries=entries.filter(x=>x.id!==id).concat(entry);
-  resetForm();showMsg((ed?"Updated ":"Added ")+fmt(amount,entry.currency)+" · "+entry.cat+".");
+  resetForm();showMsg((ed?"Updated ":"Added ")+fmt(entry.amount,entry.currency)+(entry.orig?" (paid "+fmt(entry.orig.amount,entry.orig.currency)+")":"")+" · "+entry.cat+".");
   const d=new Date(entry.date+"T00:00");if(d.getMonth()!==view.getMonth()||d.getFullYear()!==view.getFullYear())view=new Date(d.getFullYear(),d.getMonth(),1);
   render();
 });
@@ -593,7 +618,7 @@ function render(){
   const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
   const elapsed=isNow?new Date().getDate():days;
   showSplit($("sToday"),$("sTodayTot"),entries.filter(e=>e.date===todayISO()));showSplit($("sMonth"),$("sMix"),me);
-  showSplit($("sAvg"),null,me,Math.max(1,elapsed));
+  
   if(settings.budget){const pct=total/settings.budget*100,left=settings.budget-total;
     $("budgetText").textContent=(left>=0?fmtD(left)+" left of "+fmtD(settings.budget):fmtD(-left)+" over budget of "+fmtD(settings.budget))+" · "+Math.round(pct)+"% used";
     $("budgetFill").style.width=Math.min(100,pct)+"%";$("editBudget").textContent="Change budget"}
@@ -601,12 +626,12 @@ function render(){
 
   const byCat={};me.forEach(e=>byCat[e.cat]=(byCat[e.cat]||0)+toLAK(e));
   const sorted=Object.keys(byCat).map(n=>[n,catColor(n)]).sort((a,b)=>byCat[b[0]]-byCat[a[0]]);const max=sorted.length?byCat[sorted[0][0]]:1;
-  $("catBars").innerHTML=sorted.length?"":'<div class="empty">Category totals appear here once you add expenses.</div>';
+  if($("catBars")){$("catBars").innerHTML=sorted.length?"":'<div class="empty">Category totals appear here once you add expenses.</div>';
   sorted.forEach(([n,v])=>{const d=document.createElement("div");d.className="barline";
     d.innerHTML='<span class="name"><span class="dot" style="background:var('+v+')"></span><span></span></span><div class="t"><div style="width:'+(byCat[n]/max*100)+'%;background:var('+v+')"></div></div><span class="v"></span>';
-    d.querySelector(".name span:last-child").textContent=n;{const v=d.querySelector(".v");v.textContent="";byCur(me.filter(e=>e.cat===n)).forEach(([c,amt],i)=>{if(i){v.append(" · ")}const sp=document.createElement("span");sp.style.color="var(--"+c+")";sp.textContent=fmt(amt,c);v.appendChild(sp)})}$("catBars").appendChild(d)});
+    d.querySelector(".name span:last-child").textContent=n;{const v=d.querySelector(".v");v.textContent="";byCur(me.filter(e=>e.cat===n)).forEach(([c,amt],i)=>{if(i){v.append(" · ")}const sp=document.createElement("span");sp.style.color="var(--"+c+")";sp.textContent=fmt(amt,c);v.appendChild(sp)})}$("catBars").appendChild(d)});}
 
-  drawChart(me,days,isNow);
+  if($("chart"))drawChart(me,days,isNow);
 
   const q=$("search").value.trim().toLowerCase();
   const shown=me.filter(e=>!q||(e.note||"").toLowerCase().includes(q)||e.cat.toLowerCase().includes(q));
@@ -627,7 +652,7 @@ function render(){
         (e.hasPhoto?'<button type="button" class="thumb" aria-label="View image"></button>':'')+
         '<span class="amt"></span><button type="button" class="edit" aria-label="Edit entry" title="Edit">✎</button><button type="button" class="del" aria-label="Delete entry">×</button>';
       r.querySelector(".what div").textContent=e.note||e.cat;
-      r.querySelector(".what div:last-child").textContent=e.cat+" · "+e.pay;
+      r.querySelector(".what div:last-child").textContent=e.cat+" · "+e.pay+(e.orig?" · paid "+fmt(e.orig.amount,e.orig.currency):"");
       {const a=r.querySelector(".amt");a.style.setProperty("--cur","var(--"+e.currency+")");a.innerHTML='<i class="cb">'+e.currency+'</i>';a.append(fmt(e.amount,e.currency))}
       if(e.hasPhoto){const tb=r.querySelector(".thumb");photoURL(e.id).then(u=>{if(u){tb.style.background="center/cover no-repeat url("+u+")"}});
         tb.onclick=async()=>{const u=await photoURL(e.id);if(u){$("viewerImg").src=u;$("viewer").hidden=false}}}
@@ -744,7 +769,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   list.forEach(e=>{if(y>H-M-40){page();band(true);y=170;head()}
     if(ei++%2)x.fillStyle=ZEBRA,x.fillRect(M,y-28,W-2*M,42);
     txt(new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"}),M+14,y,{size:20,mono:true});
-    txt(e.cat,M+134,y,{size:20,max:150});txt(e.note||"—",M+304,y,{size:20,max:370});txt(e.pay,M+704,y,{size:20,max:140,color:MUTE});
+    txt(e.cat,M+134,y,{size:20,max:150});txt((e.note||"—")+(e.orig?"  (paid "+fmt(e.orig.amount,e.orig.currency)+")":""),M+304,y,{size:20,max:370});txt(e.pay,M+704,y,{size:20,max:140,color:MUTE});
     txt(fmt(e.amount,e.currency),W-M-94,y,{size:20,w:600,mono:true,align:"right",color:CURCOL[e.currency]});
     if(rnum[e.id])txt("#"+rnum[e.id],W-M-14,y,{size:20,mono:true,align:"right",color:GOLD});y+=42});
   y+=14;
@@ -757,7 +782,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   for(let i=0;i<withP.length;i++){const e=withP[i];expMsg("Adding image "+(i+1)+" of "+withP.length+"…");
     if(i%2===0){page();band(true);txt("IMAGES · "+monthName.toUpperCase(),W-M,62,{size:18,w:700,color:"#A9BBD3",align:"right"})}
     const top=i%2===0?130:H/2+20,boxH=i%2===0?H/2-150:H/2-M-70;
-    txt("#"+rnum[e.id]+"  "+new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" · "+e.cat+" · "+(e.note||"")+" · "+fmt(e.amount,e.currency),M,top+24,{size:22,w:600,max:W-2*M});
+    txt("#"+rnum[e.id]+"  "+new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" · "+e.cat+" · "+(e.note||"")+" · "+fmt(e.amount,e.currency)+(e.orig?" (paid "+fmt(e.orig.amount,e.orig.currency)+")":""),M,top+24,{size:22,w:600,max:W-2*M});
     const im=await bitmapOf(e.id);
     if(im){const k=Math.min((W-2*M)/im.width,(boxH-50)/im.height);x.drawImage(im,M,top+44,im.width*k,im.height*k);x.strokeStyle="#D8DEE6";x.lineWidth=2;x.strokeRect(M,top+44,im.width*k,im.height*k)}
     else txt("Image could not be loaded.",M,top+80,{size:20,color:"#B8402E"})}
@@ -771,13 +796,13 @@ $("expZip").onclick=()=>busy(async()=>{
   const list=reportList();if(!list.length){expMsg("No entries this month to export.",true);return}
   const zip=new JSZip(),folder=zip.folder("images");let n=0;
   const ORDER=CUR_ROWS.map(r=>r[0]);
-  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Image file"]];
+  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Paid (before exchange)","Paid currency","Image file"]];
   for(const e of list){let file="";
     if(e.hasPhoto){const b=await S.getPhoto(e.id).catch(()=>null);if(b){n++;const name=e.date+"_"+pad(n)+(safe(e.note)?"_"+safe(e.note):"")+".jpg";folder.file(name,b);file="images/"+name}}
-    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount].concat(ORDER.map(c=>e.currency===c?e.amount:""),[file]))}
+    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount].concat(ORDER.map(c=>e.currency===c?e.amount:""),[e.orig?e.orig.amount:"",e.orig?e.orig.currency:"",file]))}
   const sums=ORDER.map(c=>{const v=list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0);return c==="LAK"?Math.round(v):Math.round(v*100)/100});
   rows.push([]);
-  rows.push(["Total","","","","","",...sums,""]);
+  rows.push(["Total","","","","","",...sums,"","",""]);
   rows.push([]);
   CUR_ROWS.forEach(([c,label],i)=>rows.push([label,"","","",c,sums[i]]));
   zip.file("Expenses "+monthKey(view)+".csv",csvOf(rows));expMsg("Packing ZIP…");
