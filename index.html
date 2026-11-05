@@ -562,7 +562,8 @@ function short(v){const p=SYM[D()];if(v>=1e6)return p+(+(v/1e6).toFixed(1))+"M";
 // ---------- files out ----------
 async function deliver(filename,blob,msgEl){
   const file=new File([blob],filename,{type:blob.type||"application/octet-stream"});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
+  const isPhone=/iphone|ipad|ipod|android/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  if(isPhone&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({files:[file],title:filename});msgEl("Shared "+filename+".");return}
     catch(e){if(e&&e.name==="AbortError"){msgEl("Export cancelled.");return}}
   }
