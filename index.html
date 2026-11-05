@@ -61,6 +61,8 @@ button,select,input{font:inherit;color:inherit}
 .summary{background:var(--accent);color:var(--on-accent);border-radius:14px;padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
 .summary .eyebrow{color:inherit;opacity:.75}
 .big{font-family:var(--mono);font-size:1.6rem;font-weight:500;line-height:1.2;overflow-wrap:anywhere}
+.curs{display:grid;gap:2px;font-family:var(--mono);font-size:1.45rem;font-weight:500;line-height:1.2;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.curs.many{font-size:1.2rem}
 .mix{font-size:.82rem;opacity:.85;font-family:var(--mono);overflow-wrap:anywhere}
 .budgetbar{grid-column:1/-1;display:grid;gap:6px}
 .track{height:8px;border-radius:99px;background:color-mix(in srgb,currentColor 25%,transparent);overflow:hidden}
@@ -163,7 +165,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     </div>
     <div class="headctl">
       <div class="seg" role="group" aria-label="Show totals in" id="dispSeg">
-        <button type="button" data-c="LAK">₭ LAK</button><button type="button" data-c="THB">฿ THB</button><button type="button" data-c="USD">$ USD</button>
+        <button type="button" data-c="LAK">₭ LAK</button><button type="button" data-c="THB">฿ THB</button><button type="button" data-c="USD">$ USD</button><button type="button" data-c="CNY">¥ CNY</button>
       </div>
       <div class="monthnav">
         <button class="iconbtn" id="prevM" aria-label="Previous month">‹</button>
@@ -206,14 +208,15 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     <div class="ratesform" id="ratesForm" hidden>
       <label>1 $ = <input id="rUSD" inputmode="decimal" aria-label="Kip per US dollar"> ₭</label>
       <label>1 ฿ = <input id="rTHB" inputmode="decimal" aria-label="Kip per baht"> ₭</label>
+      <label>1 ¥ = <input id="rCNY" inputmode="decimal" aria-label="Kip per Chinese yuan"> ₭</label>
       <button class="ghost" id="saveRates" type="button">Save rates</button>
       <button class="ghost" id="cancelRates" type="button">Cancel</button>
     </div>
   </div>
 
   <section class="summary" aria-label="Summary">
-    <div><div class="eyebrow">Today</div><div class="big" id="sToday">₭0</div></div>
-    <div><div class="eyebrow" id="sMonthLbl">This month</div><div class="big" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
+    <div><div class="eyebrow">Today</div><div class="curs" id="sToday">₭0</div><div class="mix" id="sTodayTot"></div></div>
+    <div><div class="eyebrow" id="sMonthLbl">This month</div><div class="curs" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
     <div><div class="eyebrow">Daily average</div><div class="big" id="sAvg">₭0</div></div>
     <div class="budgetbar">
       <div class="budgetrow"><span id="budgetText">No monthly budget set</span><button class="linkbtn" id="editBudget" type="button">Set budget</button></div>
@@ -246,7 +249,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
             <div class="field"><label for="pay">Paid with</label>
               <select id="pay"><option>Cash</option><option>BCEL One</option><option>Bank card</option><option>Other</option></select></div>
             <div class="field"><label for="currency">Currency</label>
-              <select id="currency"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option></select></div>
+              <select id="currency"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
           </div>
           <div class="actions"><button class="primary" type="submit" id="submitBtn">Add expense</button><button class="ghost" type="button" id="cancelEdit" hidden>Cancel</button></div>
           <div class="msg" id="msg" role="status"></div>
@@ -305,9 +308,9 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 (function(){
 "use strict";
 const CATS=[["Food","--c1"],["Transport","--c6"],["Fuel","--c3"],["Bills","--c4"],["Shopping","--c8"],["Family","--c2"],["Health","--c5"],["Business","--c7"],["Other","--c9"]];
-const SYM={LAK:"₭",THB:"฿",USD:"$"};
-const QUICK={LAK:[10000,20000,50000,100000,200000],THB:[50,100,200,500],USD:[1,5,10,20]};
-const DEF_RATES={USD:21500,THB:660};
+const SYM={LAK:"₭",THB:"฿",USD:"$",CNY:"¥"};
+const QUICK={LAK:[10000,20000,50000,100000,200000],THB:[50,100,200,500],USD:[1,5,10,20],CNY:[10,20,50,100]};
+const DEF_RATES={USD:21500,THB:660,CNY:3000};
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
 const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
@@ -370,7 +373,7 @@ let cat="Food",cur="LAK";
 let photo=null,previewURL=null,editing=null,dropPhoto=false;
 const urlCache=new Map();
 
-function normSettings(s){return{budget:s&&s.budget>0?s.budget:0,rates:{USD:s&&s.rates&&s.rates.USD>0?s.rates.USD:DEF_RATES.USD,THB:s&&s.rates&&s.rates.THB>0?s.rates.THB:DEF_RATES.THB},display:s&&SYM[s.display]?s.display:"LAK"}}
+function normSettings(s){const r=c=>s&&s.rates&&s.rates[c]>0?s.rates[c]:DEF_RATES[c];return{budget:s&&s.budget>0?s.budget:0,rates:{USD:r("USD"),THB:r("THB"),CNY:r("CNY")},display:s&&SYM[s.display]?s.display:"LAK"}}
 const rate=c=>c==="LAK"?1:settings.rates[c];
 const toLAK=e=>e.amount*rate(e.currency);
 const D=()=>settings.display;
@@ -418,7 +421,7 @@ function parseReceipt(text){
   let total=null;
   for(let i=lines.length-1;i>=0&&total==null;i--){if(totalKey.test(lines[i])&&!/sub\s*total/i.test(lines[i])){const n=nums(lines[i]);if(n.length)total=Math.max(...n)}}
   if(total==null){const all=lines.filter(l=>!skip.test(l)&&!/\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{1,2}:\d{2}/.test(l)).flatMap(nums);if(all.length)total=Math.max(...all)}
-  let currency="LAK";if(/฿|\bTHB\b|บาท|baht/i.test(text))currency="THB";else if(/\$|\bUSD\b|US\s*dollar/i.test(text))currency="USD";
+  let currency="LAK";if(/฿|\bTHB\b|บาท|baht/i.test(text))currency="THB";else if(/¥|￥|\bCNY\b|\bRMB\b|元|人民币|yuan/i.test(text))currency="CNY";else if(/\$|\bUSD\b|US\s*dollar/i.test(text))currency="USD";
   let date=null,m;
   const fix=(y,mo,d)=>{y=+y;if(y<100)y+=2000;if(y>2400)y-=543;mo=+mo;d=+d;if(y<2000||y>2100||mo<1||mo>12||d<1||d>31)return null;return y+"-"+pad(mo)+"-"+pad(d)};
   if((m=text.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/)))date=fix(m[1],m[2],m[3]);
@@ -492,10 +495,10 @@ $("prevM").onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);re
 $("nextM").onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);render()};
 $("search").addEventListener("input",render);
 document.querySelectorAll("#dispSeg button").forEach(b=>b.onclick=()=>{settings.display=b.dataset.c;render();persistSettings()});
-$("editRates").onclick=()=>{$("ratesForm").hidden=false;$("rUSD").value=rate("USD").toLocaleString("en-US");$("rTHB").value=rate("THB").toLocaleString("en-US")};
+$("editRates").onclick=()=>{$("ratesForm").hidden=false;$("rUSD").value=rate("USD").toLocaleString("en-US");$("rTHB").value=rate("THB").toLocaleString("en-US");$("rCNY").value=rate("CNY").toLocaleString("en-US")};
 $("cancelRates").onclick=()=>{$("ratesForm").hidden=true};
-$("saveRates").onclick=()=>{const u=parseNum($("rUSD").value),t=parseNum($("rTHB").value);if(!(u>0)||!(t>0)){showMsg("Enter both rates as numbers above zero.",true);return}
-  settings.rates={USD:u,THB:t};$("ratesForm").hidden=true;render();persistSettings()};
+$("saveRates").onclick=()=>{const u=parseNum($("rUSD").value),t=parseNum($("rTHB").value),y=parseNum($("rCNY").value);if(!(u>0)||!(t>0)||!(y>0)){showMsg("Enter all three rates as numbers above zero.",true);return}
+  settings.rates={USD:u,THB:t,CNY:y};$("ratesForm").hidden=true;render();persistSettings()};
 $("editBudget").onclick=()=>{$("budgetForm").hidden=false;$("budgetInput").placeholder="Monthly budget in "+D();$("budgetInput").value=settings.budget?(Math.round(fromLAK(settings.budget)*100)/100).toLocaleString("en-US"):""};
 $("cancelBudget").onclick=()=>{$("budgetForm").hidden=true};
 $("saveBudget").onclick=()=>{const v=parseNum($("budgetInput").value);settings.budget=isFinite(v)&&v>0?Math.round(v*rate(D())):0;$("budgetForm").hidden=true;render();persistSettings()};
@@ -506,20 +509,27 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")$("viewer").hidden=t
 // ---------- render ----------
 const monthKey=d=>d.getFullYear()+"-"+pad(d.getMonth()+1);
 function monthEntries(){const k=monthKey(view);return entries.filter(e=>e.date&&e.date.slice(0,7)===k).sort((a,b)=>b.date.localeCompare(a.date)||b.ts-a.ts)}
+const CURS=["LAK","THB","USD","CNY"];
+function byCur(list){return CURS.map(c=>[c,list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(x=>x[1])}
+function showSplit(curEl,totEl,list){ // each currency on its own line, then one combined total when currencies are mixed
+  const p=byCur(list),total=list.reduce((s,e)=>s+toLAK(e),0);
+  curEl.innerHTML="";curEl.classList.toggle("many",p.length>1);
+  (p.length?p:[[D(),0]]).forEach(([c,v])=>{const d=document.createElement("div");d.textContent=fmt(v,c);curEl.appendChild(d)});
+  const mixed=p.length>1||(p.length===1&&p[0][0]!==D());
+  totEl.textContent=mixed?"Total ≈ "+fmtD(total):"";
+}
 function render(){
   const isNow=monthKey(view)===monthKey(new Date());
   $("monthLabel").textContent=view.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
   $("sMonthLbl").textContent=isNow?"This month":"Month total";
   document.querySelectorAll("#dispSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===D()));
-  $("rateText").textContent="1 $ = "+fmt(rate("USD"))+" · 1 ฿ = "+fmt(rate("THB"));
+  $("rateText").textContent="1 $ = "+fmt(rate("USD"))+" · 1 ฿ = "+fmt(rate("THB"))+" · 1 ¥ = "+fmt(rate("CNY"));
   const me=monthEntries();
   const total=me.reduce((s,e)=>s+toLAK(e),0);
   const tdy=entries.filter(e=>e.date===todayISO()).reduce((s,e)=>s+toLAK(e),0);
   const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
   const elapsed=isNow?new Date().getDate():days;
-  $("sToday").textContent=fmtD(tdy);$("sMonth").textContent=fmtD(total);
-  const paid=["LAK","THB","USD"].map(c=>[c,me.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(x=>x[1]);
-  $("sMix").textContent=paid.length>1||(paid.length===1&&paid[0][0]!==D())?"Paid: "+paid.map(([c,v])=>fmt(v,c)).join(" · "):"";
+  showSplit($("sToday"),$("sTodayTot"),entries.filter(e=>e.date===todayISO()));showSplit($("sMonth"),$("sMix"),me);
   $("sAvg").textContent=fmtD(total/Math.max(1,elapsed));
   if(settings.budget){const pct=total/settings.budget*100,left=settings.budget-total;
     $("budgetText").textContent=(left>=0?fmtD(left)+" left of "+fmtD(settings.budget):fmtD(-left)+" over budget of "+fmtD(settings.budget))+" · "+Math.round(pct)+"% used";
@@ -545,7 +555,8 @@ function render(){
     const dsum=groups[dt].reduce((s,e)=>s+toLAK(e),0);
     const label=dt===todayISO()?"Today":new Date(dt+"T00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
     g.innerHTML='<div class="dayhead"><span></span><span class="num"></span></div>';
-    g.querySelector(".dayhead span").textContent=label;g.querySelector(".dayhead .num").textContent=fmtD(dsum);
+    g.querySelector(".dayhead span").textContent=label;{const p=byCur(groups[dt]);const mixed=p.length>1||(p.length===1&&p[0][0]!==D());
+      g.querySelector(".dayhead .num").textContent=p.map(([c,v])=>fmt(v,c)).join(" · ")+(p.length>1?"  ≈ "+fmtD(dsum):"")}
     groups[dt].forEach(e=>{
       const v=(CATS.find(c=>c[0]===e.cat)||CATS[8])[1];
       const r=document.createElement("div");r.className="entry"+(e.hasPhoto?" hasimg":"")+(editing&&editing.id===e.id?" editing":"");
@@ -624,7 +635,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   page();x.fillStyle="#1F4E8C";x.fillRect(0,0,W,14);
   txt("EXPENSE REPORT",M,M+10,{size:20,w:600,color:"#5E6B7A"});txt(monthName,M,M+70,{size:52,w:700});
   txt("Generated "+new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+" · Totals in "+D(),M,M+112,{size:20,color:"#5E6B7A"});
-  txt("Rates used: 1 USD = "+fmt(rate("USD"))+" · 1 THB = "+fmt(rate("THB")),M,M+142,{size:20,color:"#5E6B7A"});
+  txt("Rates used: 1 USD = "+fmt(rate("USD"))+" · 1 THB = "+fmt(rate("THB"))+" · 1 CNY = "+fmt(rate("CNY")),M,M+142,{size:20,color:"#5E6B7A"});
   y=M+190;
   const boxes=[["Month total",fmtD(total)],["Daily average",fmtD(total/Math.max(1,el))],["Entries",list.length+(rn?" · "+rn+(rn===1?" image":" images"):"")]];
   if(settings.budget)boxes.push(["Budget",fmtD(settings.budget)+" · "+Math.round(total/settings.budget*100)+"% used"]);
@@ -632,7 +643,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   boxes.forEach((b,i)=>{const bx=M+(i%2)*(bw+30),by=y+Math.floor(i/2)*120;x.fillStyle="#EEF1F4";x.fillRect(bx,by,bw,100);
     txt(b[0].toUpperCase(),bx+20,by+36,{size:17,w:600,color:"#5E6B7A"});txt(b[1],bx+20,by+78,{size:30,mono:true,max:bw-40})});
   y+=Math.ceil(boxes.length/2)*120+20;
-  const paid=["LAK","THB","USD"].map(c=>[c,list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(p=>p[1]);
+  const paid=["LAK","THB","USD","CNY"].map(c=>[c,list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(p=>p[1]);
   txt("Paid in: "+paid.map(([c,v])=>fmt(v,c)).join("  ·  "),M,y,{size:21,mono:true});y+=60;
   txt("By category",M,y,{size:28,w:600});y+=20;rule(y);y+=40;
   const byCat={};list.forEach(e=>byCat[e.cat]=(byCat[e.cat]||0)+toLAK(e));
@@ -671,7 +682,7 @@ $("expZip").onclick=()=>busy(async()=>{
     if(e.hasPhoto){const b=await S.getPhoto(e.id).catch(()=>null);if(b){n++;const name=e.date+"_"+pad(n)+(safe(e.note)?"_"+safe(e.note):"")+".jpg";folder.file(name,b);file="images/"+name}}
     rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount,Math.round(fromLAK(toLAK(e))*100)/100,file])}
   const total=list.reduce((s,e)=>s+toLAK(e),0);rows.push([]);rows.push(["Total","","","","","",Math.round(fromLAK(total)*100)/100,""]);
-  rows.push(["Rates: 1 USD = "+rate("USD")+" LAK; 1 THB = "+rate("THB")+" LAK"]);
+  rows.push(["Rates: 1 USD = "+rate("USD")+" LAK; 1 THB = "+rate("THB")+" LAK; 1 CNY = "+rate("CNY")+" LAK"]);
   zip.file("Expenses "+monthKey(view)+".csv",csvOf(rows));expMsg("Packing ZIP…");
   await deliver("Expenses "+monthKey(view)+".zip",await zip.generateAsync({type:"blob"}),expMsg);
 });

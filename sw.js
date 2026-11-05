@@ -1,5 +1,5 @@
 // Kip Ledger offline cache. Bump VERSION whenever any app file changes.
-const VERSION = "kipledger-v4";
+const VERSION = "kipledger-v6";
 const FILES = [
   "./",
   "./index.html",
