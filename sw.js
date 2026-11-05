@@ -1,5 +1,5 @@
 // ProTracker offline cache. Bump VERSION whenever any app file changes.
-const VERSION = "kipledger-v16";
+const VERSION = "kipledger-v18";
 const FILES = [
   "./",
   "./index.html",
