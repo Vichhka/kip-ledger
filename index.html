@@ -61,8 +61,12 @@ button,select,input{font:inherit;color:inherit}
 .summary{background:var(--accent);color:var(--on-accent);border-radius:14px;padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
 .summary .eyebrow{color:inherit;opacity:.75}
 .big{font-family:var(--mono);font-size:1.6rem;font-weight:500;line-height:1.2;overflow-wrap:anywhere}
-.curs{display:grid;gap:2px;font-family:var(--mono);font-size:1.45rem;font-weight:500;line-height:1.2;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
-.curs.many{font-size:1.2rem}
+.curs{display:grid;gap:3px;margin-top:4px}
+.cl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.85rem}
+.cl span{opacity:.8}
+.cl b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.15rem;font-weight:500;white-space:nowrap}
+.cl.zero{opacity:.55}
+.cl.zero b{font-size:1rem}
 .mix{font-size:.82rem;opacity:.85;font-family:var(--mono);overflow-wrap:anywhere}
 .budgetbar{grid-column:1/-1;display:grid;gap:6px}
 .track{height:8px;border-radius:99px;background:color-mix(in srgb,currentColor 25%,transparent);overflow:hidden}
@@ -217,7 +221,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
   <section class="summary" aria-label="Summary">
     <div><div class="eyebrow">Today</div><div class="curs" id="sToday">₭0</div><div class="mix" id="sTodayTot"></div></div>
     <div><div class="eyebrow" id="sMonthLbl">This month</div><div class="curs" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
-    <div><div class="eyebrow">Daily average</div><div class="big" id="sAvg">₭0</div></div>
+    <div><div class="eyebrow">Daily average</div><div class="curs" id="sAvg"></div></div>
     <div class="budgetbar">
       <div class="budgetrow"><span id="budgetText">No monthly budget set</span><button class="linkbtn" id="editBudget" type="button">Set budget</button></div>
       <div class="track"><div class="fill" id="budgetFill" style="width:0%"></div></div>
@@ -468,12 +472,14 @@ const monthKey=d=>d.getFullYear()+"-"+pad(d.getMonth()+1);
 function monthEntries(){const k=monthKey(view);return entries.filter(e=>e.date&&e.date.slice(0,7)===k).sort((a,b)=>b.date.localeCompare(a.date)||b.ts-a.ts)}
 const CURS=["LAK","THB","USD","CNY"];
 function byCur(list){return CURS.map(c=>[c,list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(x=>x[1])}
-function showSplit(curEl,totEl,list){ // each currency on its own line, then one combined total when currencies are mixed
-  const p=byCur(list),total=list.reduce((s,e)=>s+toLAK(e),0);
-  curEl.innerHTML="";curEl.classList.toggle("many",p.length>1);
-  (p.length?p:[[D(),0]]).forEach(([c,v])=>{const d=document.createElement("div");d.textContent=fmt(v,c);curEl.appendChild(d)});
-  const mixed=p.length>1||(p.length===1&&p[0][0]!==D());
-  totEl.textContent=mixed?"Total ≈ "+fmtD(total):"";
+const CUR_ROWS=[["LAK","Kip total"],["THB","Baht total"],["CNY","Yuan total"],["USD","Dollar total"]];
+function showSplit(curEl,totEl,list,divide){ // a separate total for each currency, no converting
+  curEl.innerHTML="";
+  CUR_ROWS.forEach(([c,label])=>{const v=list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)/(divide||1);
+    const r=document.createElement("div");r.className="cl"+(v?"":" zero");
+    const l=document.createElement("span");l.textContent=label;const n=document.createElement("b");n.textContent=fmt(c==="LAK"?Math.round(v):Math.round(v*100)/100,c);
+    r.append(l,n);curEl.appendChild(r)});
+  if(totEl)totEl.textContent="";
 }
 function render(){
   const isNow=monthKey(view)===monthKey(new Date());
@@ -487,7 +493,7 @@ function render(){
   const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
   const elapsed=isNow?new Date().getDate():days;
   showSplit($("sToday"),$("sTodayTot"),entries.filter(e=>e.date===todayISO()));showSplit($("sMonth"),$("sMix"),me);
-  $("sAvg").textContent=fmtD(total/Math.max(1,elapsed));
+  showSplit($("sAvg"),null,me,Math.max(1,elapsed));
   if(settings.budget){const pct=total/settings.budget*100,left=settings.budget-total;
     $("budgetText").textContent=(left>=0?fmtD(left)+" left of "+fmtD(settings.budget):fmtD(-left)+" over budget of "+fmtD(settings.budget))+" · "+Math.round(pct)+"% used";
     $("budgetFill").style.width=Math.min(100,pct)+"%";$("editBudget").textContent="Change budget"}
@@ -513,7 +519,7 @@ function render(){
     const label=dt===todayISO()?"Today":new Date(dt+"T00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
     g.innerHTML='<div class="dayhead"><span></span><span class="num"></span></div>';
     g.querySelector(".dayhead span").textContent=label;{const p=byCur(groups[dt]);const mixed=p.length>1||(p.length===1&&p[0][0]!==D());
-      g.querySelector(".dayhead .num").textContent=p.map(([c,v])=>fmt(v,c)).join(" · ")+(p.length>1?"  ≈ "+fmtD(dsum):"")}
+      g.querySelector(".dayhead .num").textContent=p.map(([c,v])=>fmt(v,c)).join(" · ")}
     groups[dt].forEach(e=>{
       const v=(CATS.find(c=>c[0]===e.cat)||CATS[8])[1];
       const r=document.createElement("div");r.className="entry"+(e.hasPhoto?" hasimg":"")+(editing&&editing.id===e.id?" editing":"");
