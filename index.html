@@ -251,6 +251,24 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 .vnav{position:absolute;top:50%;transform:translateY(-50%);background:#fff;color:#000;border:0;border-radius:99px;width:44px;height:44px;font-size:1.5rem;cursor:pointer}
 #vPrev{left:max(12px,env(safe-area-inset-left,0px))}#vNext{right:max(12px,env(safe-area-inset-right,0px))}
 .vcount{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);color:#fff;font:600 .9rem var(--mono);background:rgba(0,0,0,.5);padding:4px 10px;border-radius:99px}
+.amtmain{display:grid;gap:6px}
+.amtmain>label,.exgrid label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.exgrid label em,.exhead em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.amtline{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:10px;align-items:end}
+@media (max-width:420px){.amtline{grid-template-columns:1fr}}
+.amtline select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;font-size:16px}
+.amtmain .amountrow input{font-size:1.8rem}
+.exbox{border:1px dashed var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;background:color-mix(in srgb,var(--gold) 4%,var(--surface))}
+.exbox.on{border-color:var(--gold);border-style:solid}
+.exbox.off{opacity:.55}
+.exhead{font-weight:600;font-size:.9rem}
+.exgrid{display:grid;grid-template-columns:minmax(0,1fr) 110px minmax(0,1.2fr);gap:12px;align-items:start}
+@media (max-width:520px){.exgrid{grid-template-columns:1fr 1fr}.exgrid .acol.ex{grid-column:1/-1}}
+.exgrid .acol.ex{padding-left:0;border-left:0;padding-top:0;border-top:0}
+.exgrid .acol.ex .amountrow input{font-size:1.4rem}
+.exbox #exHint{margin:0}
+.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-width:0;font:inherit;font-size:16px;resize:vertical;min-height:44px;line-height:1.35}
+.field textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -318,25 +336,23 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
             <label class="scan" for="photoUp">🖼 Upload images<input type="file" id="photoUp" accept="image/*" multiple></label>
             <div class="pics" id="pics" hidden></div>
           </div>
-          <div class="amt2">
-            <div class="acol">
-              <label for="amount">You paid</label>
-              <div class="amountrow"><span class="cur" id="curSym">₭</span><input id="amount" inputmode="decimal" placeholder="0" aria-label="Amount you paid"></div>
-              <select id="currency" aria-label="Currency you paid"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select>
-            </div>
-            <div class="acol rate">
-              <label for="exRate">Rate</label>
-              <input id="exRate" inputmode="decimal" placeholder="—" aria-describedby="rateHint">
-              <span class="ratehint" id="rateHint">1 ฿ = ? ₭</span>
-            </div>
-            <div class="acol ex">
-              <label for="exAmount">Exchanged to <em>(optional)</em></label>
-              <div class="amountrow"><span class="cur" id="exSym">₭</span><input id="exAmount" inputmode="decimal" placeholder="0" aria-label="Amount after exchange"></div>
-              <select id="exCur" aria-label="Currency after exchange"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select>
+          <div class="amtmain">
+            <label for="amount">Amount</label>
+            <div class="amtline">
+              <div class="amountrow"><span class="cur" id="curSym">฿</span><input id="amount" inputmode="decimal" placeholder="0" aria-label="Amount"></div>
+              <select id="currency" aria-label="Currency of the amount"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select>
             </div>
           </div>
-          <p class="hint" id="exHint">Changed money? Type the rate or the "Exchanged to" amount, and the other fills in. e.g. ฿5,000 × 70 = ₭350,000. The exchanged amount counts in your totals.</p>
           <div class="chips" id="quick"></div>
+          <div class="exbox" id="exBox">
+            <div class="exhead">Paid by changing money? <em>(optional)</em></div>
+            <div class="exgrid">
+              <div class="acol"><label for="exCur">Changed from</label><select id="exCur" aria-label="Currency you changed from"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
+              <div class="acol rate"><label for="exRate">Rate</label><input id="exRate" inputmode="decimal" placeholder="—" aria-describedby="rateHint"><span class="ratehint" id="rateHint">1 $ = ? ฿</span></div>
+              <div class="acol ex"><label for="exAmount">You paid <em>(auto)</em></label><div class="amountrow"><span class="cur" id="exSym">฿</span><input id="exAmount" inputmode="decimal" placeholder="0" aria-label="Amount you paid"></div></div>
+            </div>
+            <p class="hint" id="exHint">Type the rate and "You paid" fills in. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals.</p>
+          </div>
           <div class="cats" id="cats" role="group" aria-label="Category"></div>
           <div class="catbar"><button class="linkbtn" id="editCatsBtn" type="button">Edit categories</button></div>
           <div class="catedit" id="catEdit" hidden>
@@ -348,7 +364,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
           </div>
           <div class="row2">
             <div class="field"><label for="date">Date</label><input type="date" id="date"></div>
-            <div class="field"><label for="note">Note</label><input id="note" placeholder="e.g. lunch, fuel, phone top-up" maxlength="300"></div>
+            <div class="field"><label for="note">Note</label><textarea id="note" rows="2" placeholder="e.g. lunch, fuel, phone top-up" maxlength="300"></textarea></div>
           </div>
           <div class="field"><label for="pay">Paid with</label>
             <select id="pay"><option>Cash</option><option>BCEL One</option><option>Bank card</option><option>Other</option></select></div>
@@ -514,24 +530,29 @@ function drawCats(){$("cats").innerHTML="";const list=CATS.slice();if(cat&&!list
   b.innerHTML='<span class="dot" style="background:var('+v+')"></span><span></span>';b.lastChild.textContent=n;b.onclick=()=>{cat=n;drawCats()};$("cats").appendChild(b)})}
 function drawQuick(){$("quick").innerHTML="";$("curSym").textContent=SYM[cur];QUICK[cur].forEach(v=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent="+"+fmt(v,cur);
   b.onclick=()=>{const now=parseNum($("amount").value)||0;$("amount").value=(now+v).toLocaleString("en-US");$("amount").focus()};$("quick").appendChild(b)})}
-$("currency").onchange=e=>{cur=e.target.value;drawQuick();exDefault();exMark()};
-function exDefault(){if($("exAmount").value)return;if($("exCur").value===cur)$("exCur").value=cur==="LAK"?"THB":"LAK";$("exSym").textContent=SYM[$("exCur").value]}
+$("currency").onchange=e=>{cur=e.target.value;drawQuick();exDefault();if(parseNum($("exRate").value)>0)fromRate();exMark()};
+function exDefault(){if(!$("exAmount").value&&$("exCur").value===cur&&cur!=="THB")$("exCur").value="THB"}
 const fmtRate=r=>(+r.toPrecision(6)).toLocaleString("en-US",{maximumFractionDigits:4});
 const strength=c=>c==="LAK"?1:DEF_RATES[c]; // stronger currency is quoted first: 1 $ = 32.5 ฿, 1 ฿ = 650 ₭
 const paidIsStrong=(pc,xc)=>strength(pc)>=strength(xc);
 function rateInfo(pc,xc,paid,got){if(!(paid>0&&got>0))return null;
   return paidIsStrong(pc,xc)?{r:got/paid,text:"1 "+SYM[pc]+" = "+fmtRate(got/paid)+" "+SYM[xc]}:{r:paid/got,text:"1 "+SYM[xc]+" = "+fmtRate(paid/got)+" "+SYM[pc]}}
 const rateText=e=>e.orig?(rateInfo(e.orig.currency,e.currency,e.orig.amount,e.amount)||{text:""}).text:"";
-function rateHint(){const xc=$("exCur").value;$("rateHint").textContent=paidIsStrong(cur,xc)?"1 "+SYM[cur]+" = ? "+SYM[xc]:"1 "+SYM[xc]+" = ? "+SYM[cur]}
-function fromRate(){const p=parseNum($("amount").value),r=parseNum($("exRate").value);if(p>0&&r>0){const v=paidIsStrong(cur,$("exCur").value)?p*r:p/r;$("exAmount").value=$("exCur").value==="LAK"?Math.round(v).toLocaleString("en-US"):String(Math.round(v*100)/100)}exMark()}
-function fromEx(){const p=parseNum($("amount").value),x=parseNum($("exAmount").value);if(p>0&&x>0)$("exRate").value=fmtRate(rateInfo(cur,$("exCur").value,p,x).r)}
+const fmtIn=(v,c)=>c==="LAK"?Math.round(v).toLocaleString("en-US"):(Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});
+function rateHint(){const pc=$("exCur").value;$("rateHint").textContent=paidIsStrong(pc,cur)?"1 "+SYM[pc]+" = ? "+SYM[cur]:"1 "+SYM[cur]+" = ? "+SYM[pc]}
+function fromRate(){const x=parseNum($("amount").value),r=parseNum($("exRate").value),pc=$("exCur").value;
+  if(x>0&&r>0&&pc!==cur){$("exAmount").value=fmtIn(paidIsStrong(pc,cur)?x/r:x*r,pc)}exMark()}
+function fromEx(){const x=parseNum($("amount").value),p=parseNum($("exAmount").value),pc=$("exCur").value;if(x>0&&p>0&&pc!==cur)$("exRate").value=fmtRate(rateInfo(pc,cur,p,x).r)}
+function exMark(){rateHint();$("exSym").textContent=SYM[$("exCur").value];
+  const same=$("exCur").value===cur;$("exBox").classList.toggle("off",same);$("exBox").classList.toggle("on",!same&&parseNum($("exAmount").value)>0);
+  $("exRate").disabled=$("exAmount").disabled=same;
+  $("exHint").textContent=same?"To record money you changed, set the Amount currency above (e.g. $) and \"Changed from\" here (e.g. ฿).":"Type the rate and \"You paid\" fills in. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals."}
 $("exRate").addEventListener("input",fromRate);
 $("amount").addEventListener("input",()=>{if(parseNum($("exRate").value)>0)fromRate()});
-function exMark(){rateHint();$("exSym").textContent=SYM[$("exCur").value];$("exAmount").closest(".acol").classList.toggle("on",parseNum($("exAmount").value)>0)}
-$("exCur").onchange=()=>{exMark();if(parseNum($("exRate").value)>0)fromRate();const v=parseNum($("exAmount").value);if($("exCur").value==="LAK"&&isFinite(v))$("exAmount").value=Math.round(v).toLocaleString("en-US")};
+$("exCur").onchange=()=>{if(parseNum($("exRate").value)>0)fromRate();exMark()};
 $("exAmount").addEventListener("input",e=>{if($("exCur").value==="LAK"){const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")}fromEx();exMark()});
 $("amount").addEventListener("input",e=>{if(cur!=="LAK")return;const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")});
-$("currency").value=cur;drawCats();drawQuick();$("exCur").value="LAK";exDefault();exMark();
+$("currency").value=cur;$("exCur").value="THB";drawCats();drawQuick();exMark();
 function showMsg(t,err){$("msg").textContent=t;$("msg").className="msg"+(err?" err":"")}
 
 // ---------- images + offline receipt reading ----------
@@ -564,11 +585,10 @@ async function onImage(input){
 // ---------- add / edit ----------
 function startEdit(e){
   editing=e;clearPics();pics=pids(e).map(pid=>({pid}));drawPics();
-  const paid=e.orig||{amount:e.amount,currency:e.currency};
-  cur=paid.currency;$("currency").value=cur;drawQuick();
-  $("amount").value=cur==="LAK"?Math.round(paid.amount).toLocaleString("en-US"):String(paid.amount);
-  if(e.orig){$("exCur").value=e.currency;$("exAmount").value=e.currency==="LAK"?Math.round(e.amount).toLocaleString("en-US"):String(e.amount)}
-  else{$("exAmount").value="";exDefault()}
+  cur=e.currency;$("currency").value=cur;drawQuick();
+  $("amount").value=fmtIn(e.amount,cur);
+  if(e.orig){$("exCur").value=e.orig.currency;$("exAmount").value=fmtIn(e.orig.amount,e.orig.currency)}
+  else{$("exAmount").value="";$("exCur").value="THB";exDefault()}
   $("exRate").value=e.orig?fmtRate(rateInfo(e.orig.currency,e.currency,e.orig.amount,e.amount).r):"";
   exMark();
   cat=e.cat;drawCats();$("note").value=e.note||"";$("date").value=e.date;drawPay(e.pay||settings.payMethods[0]);
@@ -586,9 +606,8 @@ $("addForm").addEventListener("submit",async ev=>{
   if(!$("date").value){showMsg("Pick a date.",true);return}
   const ed=editing;
   const id=ed?ed.id:"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const exAmt=parseNum($("exAmount").value),exC=$("exCur").value;
-  if(exAmt>0&&exC===cur){showMsg("Pick a different currency for \"Exchanged to\", or leave it empty.",true);return}
-  const counted=exAmt>0?{amount:exAmt,currency:exC,orig:{amount,currency:cur,rate:+rateInfo(cur,exC,amount,exAmt).r.toPrecision(6)}}:{amount,currency:cur};
+  const paidAmt=parseNum($("exAmount").value),paidC=$("exCur").value;
+  const counted=(paidAmt>0&&paidC!==cur)?{amount,currency:cur,orig:{amount:paidAmt,currency:paidC,rate:+rateInfo(paidC,cur,paidAmt,amount).r.toPrecision(6)}}:{amount,currency:cur};
   const entry={id,...counted,cat,note:$("note").value.trim(),date:$("date").value,pay:$("pay").value,ts:ed?ed.ts:Date.now()};
   const keep=pics.filter(p=>p.pid).map(p=>p.pid),old=ed?pids(ed):[];
   try{
