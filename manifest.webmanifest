@@ -1,7 +1,7 @@
 {
-  "name": "Kip Ledger",
-  "short_name": "Kip Ledger",
-  "description": "Daily expenses in kip, baht and dollars. Works offline.",
+  "name": "ProTracker",
+  "short_name": "ProTracker",
+  "description": "Daily expenses in kip, baht, dollars and yuan. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

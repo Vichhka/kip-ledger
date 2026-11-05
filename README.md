@@ -1,9 +1,9 @@
-# Kip Ledger (offline)
+# ProTracker
 
 Daily expense tracker in kip, baht and US dollars that works with no internet.
 
 - Add, edit and delete expenses; quick amount buttons; 9 categories
-- Take or upload a receipt image; the phone reads the total, date and shop offline
+- Take or upload a receipt image and keep it with the expense
 - Totals in ₭ / ฿ / $ with your own exchange rates; monthly budget; chart by day
 - Export a month as a PDF report with images, or Excel (CSV) + images in a ZIP
 - Backup and restore everything as one ZIP file
@@ -23,7 +23,7 @@ All data stays on the phone (browser storage). Make a backup regularly.
 
 1. Open the link in **Safari** (with internet, once).
 2. Tap **Share → Add to Home Screen → Add**.
-3. Open Kip Ledger from the home screen. From now on it opens and works with no internet.
+3. Open ProTracker from the home screen. From now on it opens and works with no internet.
 
 On Android: open the link in Chrome, then menu **⋮ → Install app** (or Add to Home screen).
 

@@ -1,5 +1,5 @@
-// Kip Ledger offline cache. Bump VERSION whenever any app file changes.
-const VERSION = "kipledger-v7";
+// ProTracker offline cache. Bump VERSION whenever any app file changes.
+const VERSION = "kipledger-v8";
 const FILES = [
   "./",
   "./index.html",
@@ -11,12 +11,7 @@ const FILES = [
   "./firebase-auth-compat.js",
   "./firebase-firestore-compat.js",
   "./jspdf.umd.min.js",
-  "./jszip.min.js",
-  "./tesseract.min.js",
-  "./worker.min.js",
-  "./tesseract-core-lstm.wasm.js",
-  "./tesseract-core-simd-lstm.wasm.js",
-  "./eng.traineddata.gz"
+  "./jszip.min.js"
 ];
 
 // Always download fresh copies when installing a new version (skip the browser's HTTP cache).

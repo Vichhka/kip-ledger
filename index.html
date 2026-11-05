@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Kip Ledger</title>
+<title>ProTracker</title>
 <meta name="theme-color" content="#1F4E8C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Kip Ledger">
+<meta name="apple-mobile-web-app-title" content="ProTracker">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -161,7 +161,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
   <header>
     <div>
       <div class="eyebrow">Daily expenses · works offline</div>
-      <h1>Kip Ledger</h1>
+      <h1>ProTracker</h1>
     </div>
     <div class="headctl">
       <div class="seg" role="group" aria-label="Show totals in" id="dispSeg">
@@ -176,7 +176,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
   </header>
 
   <div class="install" id="installTip" hidden>
-    <span id="installText">Install Kip Ledger: in Safari tap Share, then <strong>Add to Home Screen</strong>. It then opens with no internet.</span>
+    <span id="installText">Install ProTracker: in Safari tap Share, then <strong>Add to Home Screen</strong>. It then opens with no internet.</span>
     <button class="ghost" id="installBtn" type="button" hidden>Install app</button>
   </div>
 
@@ -303,7 +303,6 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 <script src="firebase-firestore-compat.js"></script>
 <script src="jspdf.umd.min.js"></script>
 <script src="jszip.min.js"></script>
-<script src="tesseract.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -404,36 +403,6 @@ $("clearPhoto").onclick=clearPhoto;
 $("photo").addEventListener("change",e=>onImage(e.target));
 $("photoUp").addEventListener("change",e=>onImage(e.target));
 
-let worker=null,workerP=null;
-function getWorker(){if(!workerP)workerP=Tesseract.createWorker("eng",1,{workerPath:new URL("worker.min.js",location.href).href,corePath:new URL(".",location.href).href,langPath:new URL(".",location.href).href,gzip:true,workerBlobURL:false})
-  .then(w=>(worker=w)).catch(e=>{workerP=null;throw e});return workerP}
-
-function toNum(s){
-  if(/^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(s))return +s.replace(/,/g,"");
-  if(/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s))return +s.replace(/\./g,"").replace(",",".");
-  if(/^\d+([.,]\d{1,2})?$/.test(s))return +s.replace(",",".");
-  return NaN}
-function nums(line){return (line.match(/\d[\d.,]*\d|\d/g)||[]).map(toNum).filter(n=>isFinite(n)&&n>0&&n<1e10)}
-function parseReceipt(text){
-  const lines=text.split(/\n/).map(s=>s.trim()).filter(Boolean);
-  const totalKey=/(grand\s*total|total|amount\s*(due|paid)|net\s*amount|balance|ລວມ|ທັງໝົດ|รวม|ยอด|ສຸດທິ|สุทธิ)/i;
-  const skip=/(tel|phone|fax|ໂທ|โทร|invoice|bill\s*no|receipt\s*no|no\.|#|tax\s*id|vat\s*no|date|time|cash|change|ທອນ|เงินทอน|card)/i;
-  let total=null;
-  for(let i=lines.length-1;i>=0&&total==null;i--){if(totalKey.test(lines[i])&&!/sub\s*total/i.test(lines[i])){const n=nums(lines[i]);if(n.length)total=Math.max(...n)}}
-  if(total==null){const all=lines.filter(l=>!skip.test(l)&&!/\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{1,2}:\d{2}/.test(l)).flatMap(nums);if(all.length)total=Math.max(...all)}
-  let currency="LAK";if(/฿|\bTHB\b|บาท|baht/i.test(text))currency="THB";else if(/¥|￥|\bCNY\b|\bRMB\b|元|人民币|yuan/i.test(text))currency="CNY";else if(/\$|\bUSD\b|US\s*dollar/i.test(text))currency="USD";
-  let date=null,m;
-  const fix=(y,mo,d)=>{y=+y;if(y<100)y+=2000;if(y>2400)y-=543;mo=+mo;d=+d;if(y<2000||y>2100||mo<1||mo>12||d<1||d>31)return null;return y+"-"+pad(mo)+"-"+pad(d)};
-  if((m=text.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/)))date=fix(m[1],m[2],m[3]);
-  if(!date&&(m=text.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/)))date=fix(m[3],m[2],m[1]);
-  const merchant=(lines.find(l=>(l.match(/[A-Za-z]/g)||[]).length>=3&&!skip.test(l)&&!/\d{3,}/.test(l))||"").replace(/[^\w &'.\-]/g,"").trim().slice(0,40)||null;
-  const low=text.toLowerCase();let guess=null;
-  const G=[["Fuel",/(fuel|petrol|gasoline|diesel|ptt|shell|caltex|petro|ນ້ຳມັນ|น้ำมัน)/],["Health",/(pharma|hospital|clinic|medic|drug|ຢາ|โรงพยาบาล|ร้านยา)/],
-    ["Bills",/(edl|electric|water supply|internet|unitel|lao telecom|etl|ltc|bill payment|ຄ່າໄຟ|ค่าไฟ)/],["Food",/(restaurant|cafe|coffee|food|noodle|pho|bakery|kitchen|bbq|ອາຫານ|อาหาร|กาแฟ)/],
-    ["Transport",/(taxi|loca|grab|bus|train|lcr|railway|airline|flight|parking)/],["Shopping",/(mart|market|shop|store|supermarket|mall|7-eleven|jmart|lotus|makro)/]];
-  for(const [c,re] of G)if(re.test(low)){guess=c;break}
-  return{total,currency,date,merchant,category:guess}}
-
 async function onImage(input){
   const f=input.files&&input.files[0];input.value="";if(!f)return;
   if(f.type&&!f.type.startsWith("image/")){showMsg("Choose an image file (JPG, PNG, HEIC, WebP…).",true);return}
@@ -441,19 +410,7 @@ async function onImage(input){
   dropPhoto=false;photo=img;
   if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(photo);
   $("previewImg").src=previewURL;$("preview").hidden=false;
-  $("previewText").innerHTML='<span class="spin"></span> Reading image… (first time takes a little longer)';
-  try{
-    const w=await getWorker();
-    const ocrImg=await resize(img,2000).catch(()=>img);
-    const {data}=await w.recognize(ocrImg);
-    const r=parseReceipt(data.text||"");const filled=[];
-    if(r.currency!==cur&&r.total!=null){cur=r.currency;$("currency").value=cur;drawQuick()}
-    if(r.total>0){$("amount").value=cur==="LAK"?Math.round(r.total).toLocaleString("en-US"):String(r.total);filled.push("amount")}
-    if(r.date){$("date").value=r.date;filled.push("date")}
-    if(r.merchant&&!$("note").value){$("note").value=r.merchant;filled.push("note")}
-    if(r.category){cat=r.category;drawCats();filled.push("category")}
-    $("previewText").textContent=filled.length?"Filled in "+filled.join(", ")+". Please check the numbers.":"Image attached. No total found, so enter the details below.";
-  }catch(err){$("previewText").textContent="Image attached. Couldn't read it, so enter the details below."}
+  $("previewText").textContent="Image attached. Enter the details below.";
 }
 
 // ---------- add / edit ----------
@@ -669,7 +626,7 @@ $("expPdf").onclick=()=>busy(async()=>{
     if(im){const k=Math.min((W-2*M)/im.width,(boxH-50)/im.height);x.drawImage(im,M,top+44,im.width*k,im.height*k);x.strokeStyle="#D8DEE6";x.lineWidth=2;x.strokeRect(M,top+44,im.width*k,im.height*k)}
     else txt("Image could not be loaded.",M,top+80,{size:20,color:"#B8402E"})}
   const {jsPDF}=window.jspdf;const pdf=new jsPDF({unit:"pt",format:"a4",compress:true});
-  pages.forEach((c,i)=>{x=c.getContext("2d");txt("Kip Ledger · "+monthName+" · page "+(i+1)+" of "+pages.length,W-M,H-50,{size:16,color:"#5E6B7A",align:"right"});
+  pages.forEach((c,i)=>{x=c.getContext("2d");txt("ProTracker · "+monthName+" · page "+(i+1)+" of "+pages.length,W-M,H-50,{size:16,color:"#5E6B7A",align:"right"});
     if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",0.86),"JPEG",0,0,595.28,841.89)});
   await deliver("Expense report "+monthKey(view)+".pdf",pdf.output("blob"),expMsg);
 });
@@ -693,13 +650,13 @@ $("backupBtn").onclick=async()=>{
   try{bMsg("Making backup…");const zip=new JSZip();
     zip.file("kipledger-backup.json",JSON.stringify({app:"kipledger",version:1,made:new Date().toISOString(),settings,entries}));
     const f=zip.folder("photos");for(const e of entries)if(e.hasPhoto){const b=await S.getPhoto(e.id).catch(()=>null);if(b)f.file(e.id+".jpg",b)}
-    await deliver("Kip Ledger backup "+todayISO()+".zip",await zip.generateAsync({type:"blob"}),bMsg);
+    await deliver("ProTracker backup "+todayISO()+".zip",await zip.generateAsync({type:"blob"}),bMsg);
   }catch(e){bMsg("Backup failed. Try again.",true)}};
 $("restoreFile").addEventListener("change",async ev=>{
   const f=ev.target.files&&ev.target.files[0];ev.target.value="";if(!f)return;
   try{bMsg("Reading backup…");const zip=await JSZip.loadAsync(f);const j=zip.file("kipledger-backup.json");
-    if(!j){bMsg("That ZIP isn't a Kip Ledger backup.",true);return}
-    const data=JSON.parse(await j.async("string"));if(data.app!=="kipledger"||!Array.isArray(data.entries)){bMsg("That ZIP isn't a Kip Ledger backup.",true);return}
+    if(!j){bMsg("That ZIP isn't a ProTracker backup.",true);return}
+    const data=JSON.parse(await j.async("string"));if(data.app!=="kipledger"||!Array.isArray(data.entries)){bMsg("That ZIP isn't a ProTracker backup.",true);return}
     let added=0,updated=0;
     for(const e of data.entries){if(!e||!e.id||!(e.amount>0))continue;
       const p=zip.file("photos/"+e.id+".jpg");if(p){await S.putPhoto(e.id,await p.async("blob"));forgetURL(e.id)}
@@ -712,7 +669,7 @@ $("restoreFile").addEventListener("change",async ev=>{
 // ---------- install + offline ----------
 let deferred=null;
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
-if(!standalone){$("installTip").hidden=false;if(!/iphone|ipad|ipod/i.test(navigator.userAgent))$("installText").innerHTML="Install Kip Ledger so it opens with no internet: use your browser menu, then <strong>Install app</strong> or <strong>Add to Home screen</strong>."}
+if(!standalone){$("installTip").hidden=false;if(!/iphone|ipad|ipod/i.test(navigator.userAgent))$("installText").innerHTML="Install ProTracker so it opens with no internet: use your browser menu, then <strong>Install app</strong> or <strong>Add to Home screen</strong>."}
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;$("installBtn").hidden=false});
 $("installBtn").onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice.catch(()=>{});deferred=null;$("installBtn").hidden=true};
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
