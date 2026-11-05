@@ -590,39 +590,49 @@ $("expPdf").onclick=()=>busy(async()=>{
     let t=String(s??"");if(o.max&&x.measureText(t).width>o.max){while(t.length>1&&x.measureText(t+"…").width>o.max)t=t.slice(0,-1);t+="…"}x.fillText(t,px,py)};
   const rule=(py,c)=>{x.fillStyle=c||"#D8DEE6";x.fillRect(M,py,W-2*M,2)};
   const monthName=view.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
-  const total=list.reduce((s,e)=>s+toLAK(e),0);
   const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
   const el=monthKey(view)===monthKey(new Date())?new Date().getDate():days;
   let rn=0;const rnum={};list.forEach(e=>{if(e.hasPhoto)rnum[e.id]=++rn});
+  const sumOf=(arr,c)=>arr.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0);
+  const money=(v,c)=>fmt(c==="LAK"?Math.round(v):Math.round(v*100)/100,c);
+  const CUR_NAMES={LAK:"Kip",THB:"Baht",CNY:"Yuan",USD:"Dollar"};
 
   page();x.fillStyle="#1F4E8C";x.fillRect(0,0,W,14);
   txt("EXPENSE REPORT",M,M+10,{size:20,w:600,color:"#5E6B7A"});txt(monthName,M,M+70,{size:52,w:700});
-  txt("Generated "+new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+" · Totals in "+D(),M,M+112,{size:20,color:"#5E6B7A"});
-  txt("Rates used: 1 USD = "+fmt(rate("USD"))+" · 1 THB = "+fmt(rate("THB"))+" · 1 CNY = "+fmt(rate("CNY")),M,M+142,{size:20,color:"#5E6B7A"});
-  y=M+190;
-  const boxes=[["Month total",fmtD(total)],["Daily average",fmtD(total/Math.max(1,el))],["Entries",list.length+(rn?" · "+rn+(rn===1?" image":" images"):"")]];
-  if(settings.budget)boxes.push(["Budget",fmtD(settings.budget)+" · "+Math.round(total/settings.budget*100)+"% used"]);
-  const bw=(W-2*M-30)/2;
-  boxes.forEach((b,i)=>{const bx=M+(i%2)*(bw+30),by=y+Math.floor(i/2)*120;x.fillStyle="#EEF1F4";x.fillRect(bx,by,bw,100);
-    txt(b[0].toUpperCase(),bx+20,by+36,{size:17,w:600,color:"#5E6B7A"});txt(b[1],bx+20,by+78,{size:30,mono:true,max:bw-40})});
-  y+=Math.ceil(boxes.length/2)*120+20;
-  const paid=["LAK","THB","USD","CNY"].map(c=>[c,list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0)]).filter(p=>p[1]);
-  txt("Paid in: "+paid.map(([c,v])=>fmt(v,c)).join("  ·  "),M,y,{size:21,mono:true});y+=60;
-  txt("By category",M,y,{size:28,w:600});y+=20;rule(y);y+=40;
-  const byCat={};list.forEach(e=>byCat[e.cat]=(byCat[e.cat]||0)+toLAK(e));
-  const cs=Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]);const cmax=byCat[cs[0]]||1;
-  cs.forEach(c=>{txt(c,M,y,{size:22});x.fillStyle="#DCE6F3";x.fillRect(M+200,y-18,560,20);x.fillStyle="#1F4E8C";x.fillRect(M+200,y-18,560*byCat[c]/cmax,20);
-    txt(fmtD(byCat[c]),W-M-90,y,{size:21,mono:true,align:"right"});txt(Math.round(byCat[c]/total*100)+"%",W-M,y,{size:21,mono:true,align:"right",color:"#5E6B7A"});y+=40});
+  txt("Generated "+new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+" · "+list.length+(list.length===1?" entry":" entries")+(rn?" · "+rn+(rn===1?" image":" images"):"")+" · each currency totalled separately",M,M+112,{size:20,color:"#5E6B7A"});
+  y=M+170;
+
+  // totals by currency (no converting)
+  txt("Totals by currency",M,y,{size:28,w:600});y+=20;rule(y);y+=34;
+  const tc=[["Currency",M],["Month total",M+560,"right"],["Daily average",W-M,"right"]];
+  tc.forEach(c=>txt(c[0].toUpperCase(),c[1],y,{size:16,w:600,color:"#5E6B7A",align:c[2]}));y+=14;rule(y,"#EEF1F4");y+=40;
+  CUR_ROWS.forEach(([c,label])=>{const v=sumOf(list,c);const col=v?"#18202B":"#9AA4AE";
+    x.fillStyle=v?"#EEF1F4":"#FFFFFF";x.fillRect(M,y-30,W-2*M,44);
+    txt(label,M+14,y,{size:24,w:v?600:400,color:col});txt(money(v,c),M+560,y,{size:26,mono:true,align:"right",color:col});
+    txt(money(v/Math.max(1,el),c),W-M-14,y,{size:22,mono:true,align:"right",color:col});y+=52});
   y+=30;
-  const cols=[["Date",M],["Category",M+110],["Note",M+260],["Paid with",M+560],["Amount",M+830,"right"],["In "+D(),W-M-80,"right"],["Img",W-M,"right"]];
+
+  // by category, one column per currency
+  txt("By category",M,y,{size:28,w:600});y+=20;rule(y);y+=34;
+  const cc=[["Category",M,""],["Kip",M+500,"right","LAK"],["Baht",M+700,"right","THB"],["Yuan",M+880,"right","CNY"],["Dollar",W-M,"right","USD"]];
+  cc.forEach(c=>txt(c[0].toUpperCase(),c[1],y,{size:16,w:600,color:"#5E6B7A",align:c[2]||"left"}));y+=14;rule(y,"#EEF1F4");y+=34;
+  CATS.map(c=>c[0]).filter(n=>list.some(e=>e.cat===n)).forEach(n=>{const inCat=list.filter(e=>e.cat===n);
+    txt(n,M,y,{size:21});cc.slice(1).forEach(c=>{const v=sumOf(inCat,c[3]);txt(v?money(v,c[3]):"—",c[1],y,{size:20,mono:true,align:"right",color:v?"#18202B":"#9AA4AE"})});
+    y+=12;rule(y,"#EEF1F4");y+=30});
+  y+=30;
+
+  // entries (original amounts only)
+  const cols=[["Date",M],["Category",M+120],["Note",M+290],["Paid with",M+690],["Amount",W-M-80,"right"],["Img",W-M,"right"]];
   const head=()=>{txt("Entries",M,y,{size:28,w:600});y+=20;rule(y);y+=34;cols.forEach(c=>txt(c[0].toUpperCase(),c[1],y,{size:16,w:600,color:"#5E6B7A",align:c[2]}));y+=14;rule(y,"#EEF1F4");y+=34};
   if(y>H-260)page();head();
   list.forEach(e=>{if(y>H-M-40){page();head()}
     txt(new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"}),M,y,{size:20,mono:true});
-    txt(e.cat,M+110,y,{size:20,max:140});txt(e.note||"—",M+260,y,{size:20,max:285});txt(e.pay,M+560,y,{size:20,max:120,color:"#5E6B7A"});
-    txt(fmt(e.amount,e.currency),M+830,y,{size:20,mono:true,align:"right"});txt(fmtD(toLAK(e)),W-M-80,y,{size:20,mono:true,align:"right"});
+    txt(e.cat,M+120,y,{size:20,max:150});txt(e.note||"—",M+290,y,{size:20,max:380});txt(e.pay,M+690,y,{size:20,max:150,color:"#5E6B7A"});
+    txt(fmt(e.amount,e.currency),W-M-80,y,{size:20,mono:true,align:"right"});
     if(rnum[e.id])txt("#"+rnum[e.id],W-M,y,{size:20,mono:true,align:"right",color:"#1F4E8C"});y+=12;rule(y,"#EEF1F4");y+=30});
-  y+=6;txt("Total",M,y,{size:22,w:600});txt(fmtD(total),W-M-80,y,{size:22,w:600,mono:true,align:"right"});
+  y+=10;
+  CUR_ROWS.forEach(([c,label])=>{const v=sumOf(list,c);if(!v)return;if(y>H-M-40)page();
+    txt(label,M,y,{size:22,w:600});txt(money(v,c),W-M-80,y,{size:22,w:600,mono:true,align:"right"});y+=38});
   const withP=list.filter(e=>e.hasPhoto);
   for(let i=0;i<withP.length;i++){const e=withP[i];expMsg("Adding image "+(i+1)+" of "+withP.length+"…");
     if(i%2===0){page();x.fillStyle="#1F4E8C";x.fillRect(0,0,W,14);txt("IMAGES · "+monthName.toUpperCase(),M,M,{size:18,w:600,color:"#5E6B7A"})}
@@ -640,12 +650,16 @@ $("expPdf").onclick=()=>busy(async()=>{
 $("expZip").onclick=()=>busy(async()=>{
   const list=reportList();if(!list.length){expMsg("No entries this month to export.",true);return}
   const zip=new JSZip(),folder=zip.folder("images");let n=0;
-  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Amount in "+D(),"Image file"]];
+  const ORDER=CUR_ROWS.map(r=>r[0]);
+  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Image file"]];
   for(const e of list){let file="";
     if(e.hasPhoto){const b=await S.getPhoto(e.id).catch(()=>null);if(b){n++;const name=e.date+"_"+pad(n)+(safe(e.note)?"_"+safe(e.note):"")+".jpg";folder.file(name,b);file="images/"+name}}
-    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount,Math.round(fromLAK(toLAK(e))*100)/100,file])}
-  const total=list.reduce((s,e)=>s+toLAK(e),0);rows.push([]);rows.push(["Total","","","","","",Math.round(fromLAK(total)*100)/100,""]);
-  rows.push(["Rates: 1 USD = "+rate("USD")+" LAK; 1 THB = "+rate("THB")+" LAK; 1 CNY = "+rate("CNY")+" LAK"]);
+    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount].concat(ORDER.map(c=>e.currency===c?e.amount:""),[file]))}
+  const sums=ORDER.map(c=>{const v=list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0);return c==="LAK"?Math.round(v):Math.round(v*100)/100});
+  rows.push([]);
+  rows.push(["Total","","","","","",...sums,""]);
+  rows.push([]);
+  CUR_ROWS.forEach(([c,label],i)=>rows.push([label,"","","",c,sums[i]]));
   zip.file("Expenses "+monthKey(view)+".csv",csvOf(rows));expMsg("Packing ZIP…");
   await deliver("Expenses "+monthKey(view)+".zip",await zip.generateAsync({type:"blob"}),expMsg);
 });
