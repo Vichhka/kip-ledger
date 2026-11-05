@@ -345,9 +345,9 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
           </div>
           <div class="chips" id="quick"></div>
           <div class="exbox" id="exBox">
-            <div class="exhead">Paid by changing money? <em>(optional)</em></div>
+            <div class="exhead">Paid with baht exchanged to this currency? <em>(optional)</em></div>
             <div class="exgrid">
-              <div class="acol"><label for="exCur">Changed from</label><select id="exCur" aria-label="Currency you changed from"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
+              <div class="acol"><label for="exCur">Changed from</label><select id="exCur" aria-label="Currency you changed from" disabled><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
               <div class="acol rate"><label for="exRate">Rate</label><input id="exRate" inputmode="decimal" placeholder="—" aria-describedby="rateHint"><span class="ratehint" id="rateHint">1 $ = ? ฿</span></div>
               <div class="acol ex"><label for="exAmount">You paid <em>(auto)</em></label><div class="amountrow"><span class="cur" id="exSym">฿</span><input id="exAmount" inputmode="decimal" placeholder="0" aria-label="Amount you paid"></div></div>
             </div>
@@ -531,22 +531,28 @@ function drawCats(){$("cats").innerHTML="";const list=CATS.slice();if(cat&&!list
 function drawQuick(){$("quick").innerHTML="";$("curSym").textContent=SYM[cur];QUICK[cur].forEach(v=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent="+"+fmt(v,cur);
   b.onclick=()=>{const now=parseNum($("amount").value)||0;$("amount").value=(now+v).toLocaleString("en-US");$("amount").focus()};$("quick").appendChild(b)})}
 $("currency").onchange=e=>{cur=e.target.value;drawQuick();exDefault();if(parseNum($("exRate").value)>0)fromRate();exMark()};
-function exDefault(){if(!$("exAmount").value&&$("exCur").value===cur&&cur!=="THB")$("exCur").value="THB"}
+function exDefault(){$("exCur").value=BASE}
 const fmtRate=r=>(+r.toPrecision(6)).toLocaleString("en-US",{maximumFractionDigits:4});
 const strength=c=>c==="LAK"?1:DEF_RATES[c]; // stronger currency is quoted first: 1 $ = 32.5 ฿, 1 ฿ = 650 ₭
 const paidIsStrong=(pc,xc)=>strength(pc)>=strength(xc);
 function rateInfo(pc,xc,paid,got){if(!(paid>0&&got>0))return null;
   return paidIsStrong(pc,xc)?{r:got/paid,text:"1 "+SYM[pc]+" = "+fmtRate(got/paid)+" "+SYM[xc]}:{r:paid/got,text:"1 "+SYM[xc]+" = "+fmtRate(paid/got)+" "+SYM[pc]}}
-const rateText=e=>e.orig?(rateInfo(e.orig.currency,e.currency,e.orig.amount,e.amount)||{text:""}).text:"";
+const BASE="THB"; // money always starts in baht
+function xv(e){ // exchange view: {pc,pa (paid), gc,ga (received)} with baht on the paid side
+  if(!e.orig)return null;
+  if(e.currency===BASE&&e.orig.currency!==BASE)return{pc:BASE,pa:e.amount,gc:e.orig.currency,ga:e.orig.amount};
+  return{pc:e.orig.currency,pa:e.orig.amount,gc:e.currency,ga:e.amount}}
+const rateText=e=>{const v=xv(e);return v?(rateInfo(v.pc,v.gc,v.pa,v.ga)||{text:""}).text:""};
+const paidText=e=>{const v=xv(e);return v?"paid "+fmt(v.pa,v.pc)+" → "+fmt(v.ga,v.gc)+" · "+rateText(e):""};
 const fmtIn=(v,c)=>c==="LAK"?Math.round(v).toLocaleString("en-US"):(Math.round(v*100)/100).toLocaleString("en-US",{maximumFractionDigits:2});
 function rateHint(){const pc=$("exCur").value;$("rateHint").textContent=paidIsStrong(pc,cur)?"1 "+SYM[pc]+" = ? "+SYM[cur]:"1 "+SYM[cur]+" = ? "+SYM[pc]}
 function fromRate(){const x=parseNum($("amount").value),r=parseNum($("exRate").value),pc=$("exCur").value;
   if(x>0&&r>0&&pc!==cur){$("exAmount").value=fmtIn(paidIsStrong(pc,cur)?x/r:x*r,pc)}exMark()}
 function fromEx(){const x=parseNum($("amount").value),p=parseNum($("exAmount").value),pc=$("exCur").value;if(x>0&&p>0&&pc!==cur)$("exRate").value=fmtRate(rateInfo(pc,cur,p,x).r)}
 function exMark(){rateHint();$("exSym").textContent=SYM[$("exCur").value];
-  const same=$("exCur").value===cur;$("exBox").classList.toggle("off",same);$("exBox").classList.toggle("on",!same&&parseNum($("exAmount").value)>0);
+  const same=cur===BASE;$("exBox").classList.toggle("off",same);$("exBox").classList.toggle("on",!same&&parseNum($("exAmount").value)>0);
   $("exRate").disabled=$("exAmount").disabled=same;
-  $("exHint").textContent=same?"To record money you changed, set the Amount currency above (e.g. $) and \"Changed from\" here (e.g. ฿).":"Type the rate and \"You paid\" fills in. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals."}
+  $("exHint").textContent=same?"Paid in baht? Just enter the Amount above. To record baht you exchanged, set the Amount currency above to $, ₭ or ¥.":"Type the rate and \"You paid\" fills in. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals."}
 $("exRate").addEventListener("input",fromRate);
 $("amount").addEventListener("input",()=>{if(parseNum($("exRate").value)>0)fromRate()});
 $("exCur").onchange=()=>{if(parseNum($("exRate").value)>0)fromRate();exMark()};
@@ -585,11 +591,10 @@ async function onImage(input){
 // ---------- add / edit ----------
 function startEdit(e){
   editing=e;clearPics();pics=pids(e).map(pid=>({pid}));drawPics();
-  cur=e.currency;$("currency").value=cur;drawQuick();
-  $("amount").value=fmtIn(e.amount,cur);
-  if(e.orig){$("exCur").value=e.orig.currency;$("exAmount").value=fmtIn(e.orig.amount,e.orig.currency)}
-  else{$("exAmount").value="";$("exCur").value="THB";exDefault()}
-  $("exRate").value=e.orig?fmtRate(rateInfo(e.orig.currency,e.currency,e.orig.amount,e.amount).r):"";
+  const v=xv(e);
+  if(v&&v.pc===BASE){cur=v.gc;$("currency").value=cur;drawQuick();$("amount").value=fmtIn(v.ga,cur);$("exCur").value=BASE;$("exAmount").value=fmtIn(v.pa,BASE)}
+  else{cur=e.currency;$("currency").value=cur;drawQuick();$("amount").value=fmtIn(e.amount,cur);if(e.orig){$("exCur").value=e.orig.currency;$("exAmount").value=fmtIn(e.orig.amount,e.orig.currency)}else{$("exAmount").value="";exDefault()}}
+  $("exRate").value=v?fmtRate(rateInfo(v.pc,v.gc,v.pa,v.ga).r):"";
   exMark();
   cat=e.cat;drawCats();$("note").value=e.note||"";$("date").value=e.date;drawPay(e.pay||settings.payMethods[0]);
   $("formTitle").textContent="Edit expense";$("submitBtn").textContent="Save changes";$("cancelEdit").hidden=false;showMsg("");
@@ -763,7 +768,7 @@ function render(){
         (pids(e).length?'<button type="button" class="thumb" aria-label="View images"></button>':'')+
         '<span class="amt"></span><button type="button" class="edit" aria-label="Edit entry" title="Edit">✎</button><button type="button" class="del" aria-label="Delete entry">×</button>';
       r.querySelector(".what div").textContent=e.note||e.cat;
-      r.querySelector(".what div:last-child").textContent=e.cat+" · "+e.pay+(e.orig?" · paid "+fmt(e.orig.amount,e.orig.currency)+" · "+rateText(e):"");
+      r.querySelector(".what div:last-child").textContent=e.cat+" · "+e.pay+(e.orig?" · "+paidText(e):"");
       {const a=r.querySelector(".amt");a.style.setProperty("--cur","var(--"+e.currency+")");a.innerHTML='<i class="cb">'+e.currency+'</i>';a.append(fmt(e.amount,e.currency))}
       {const ps=pids(e);if(ps.length){const tb=r.querySelector(".thumb");photoURL(ps[0]).then(u=>{if(u){tb.style.background="center/cover no-repeat url("+u+")"}});
         if(ps.length>1){const n=document.createElement("span");n.className="tn";n.textContent=ps.length;tb.appendChild(n)}
@@ -893,7 +898,7 @@ $("expPdf").onclick=()=>busy(async()=>{
     catLines.forEach((l,i)=>txt(l,M+114,y+i*26,{size:19}));
     noteLines.forEach((l,i)=>txt(l,M+254,y+i*26,{size:19,color:INK}));
     payLines.forEach((l,i)=>txt(l,M+522,y+i*26,{size:18,color:MUTE}));
-    if(e.orig){txt(fmt(e.orig.amount,e.orig.currency),M+718,y,{size:18,mono:true,align:"right",color:CURCOL[e.orig.currency]});
+    if(e.orig){const v=xv(e);txt(fmt(v.pa,v.pc),M+718,y,{size:18,mono:true,align:"right",color:CURCOL[v.pc]});
       rateText(e).replace(" = ","=|").split("|").forEach((part,i)=>txt(part,M+852,y+i*20,{size:14,mono:true,align:"right",color:MUTE}))}
     else{txt("—",M+718,y,{size:18,align:"right",color:"#B8C0C8"});txt("—",M+852,y,{size:18,align:"right",color:"#B8C0C8"})}
     txt(fmt(e.amount,e.currency),W-M-74,y,{size:19,w:700,mono:true,align:"right",color:CURCOL[e.currency]});
@@ -910,10 +915,10 @@ $("expPdf").onclick=()=>busy(async()=>{
   if(ex.length){
     y+=40;if(y>H-520){page();band(true);y=170}
     section("Exchange details");
-    const groups={};ex.forEach(e=>{const k=e.orig.currency+">"+e.currency;(groups[k]=groups[k]||[]).push(e)});
+    const groups={};ex.forEach(e=>{const v=xv(e);const k=v.pc+">"+v.gc;(groups[k]=groups[k]||[]).push(e)});
     const keys=Object.keys(groups);
     thead([["Exchange",M],["Paid",M+520,"right"],["Received",M+800,"right"],["Average rate",W-M,"right"]]);
-    keys.forEach((k,i)=>{const g=groups[k],[from,to]=k.split(">");const paid=g.reduce((s,e)=>s+e.orig.amount,0),got=g.reduce((s,e)=>s+e.amount,0);
+    keys.forEach((k,i)=>{const g=groups[k],[from,to]=k.split(">");const paid=g.reduce((s,e)=>s+xv(e).pa,0),got=g.reduce((s,e)=>s+xv(e).ga,0);
       if(i%2)x.fillStyle=ZEBRA,x.fillRect(M,y-30,W-2*M,46);
       let bx=M+14;bx+=badge(from,bx,y)+8;txt("→",bx,y,{size:20,w:700,color:MUTE});bx+=30;badge(to,bx,y);
       txt(g.length+(g.length===1?" exchange":" exchanges"),bx+80,y,{size:18,color:MUTE});
@@ -927,9 +932,10 @@ $("expPdf").onclick=()=>busy(async()=>{
       if(i%2)x.fillStyle=ZEBRA,x.fillRect(M,y-28,W-2*M,rowH);
       txt(new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short"}),M+14,y,{size:19,mono:true});
       nl.forEach((l,j)=>txt(l,M+134,y+j*26,{size:19}));
-      txt(fmt(e.orig.amount,e.orig.currency),M+606,y,{size:19,w:600,mono:true,align:"right",color:CURCOL[e.orig.currency]});
+      {const v=xv(e);
+      txt(fmt(v.pa,v.pc),M+606,y,{size:19,w:600,mono:true,align:"right",color:CURCOL[v.pc]});
       txt(rateText(e),M+776,y,{size:17,mono:true,align:"right",color:MUTE});
-      txt(fmt(e.amount,e.currency),W-M-14,y,{size:19,w:700,mono:true,align:"right",color:CURCOL[e.currency]});y+=rowH});
+      txt(fmt(v.ga,v.gc),W-M-14,y,{size:19,w:700,mono:true,align:"right",color:CURCOL[v.gc]});}y+=rowH});
   }
   // receipts: 3 per A4 page, side by side, each with a fully wrapped caption
   const overlays=[];
@@ -941,7 +947,7 @@ $("expPdf").onclick=()=>busy(async()=>{
     // caption: number + date on the first line, then the details wrapped to the column width
     txt("#"+rnum[e.id]+(n>1?"  ("+(k+1)+"/"+n+")":"")+"  ·  "+new Date(e.date+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"}),x0,capTop,{size:19,w:700,color:NAVY});
     txt(fmt(e.amount,e.currency),x0+colW,capTop,{size:19,w:700,mono:true,align:"right",color:CURCOL[e.currency]});
-    const detail=e.cat+" · "+(e.note||"—")+(e.orig?" · paid "+fmt(e.orig.amount,e.orig.currency)+" · "+rateText(e):"");
+    const detail=e.cat+" · "+(e.note||"—")+(e.orig?" · "+paidText(e):"");
     let lines=wrap(detail,colW,16);if(lines.length>capMaxLines-1){lines=lines.slice(0,capMaxLines-1);lines[lines.length-1]=lines[lines.length-1].replace(/.?$/,"…")}
     lines.forEach((l,j)=>txt(l,x0,capTop+capLine*(j+1)+2,{size:16,color:INK}));
     const im=await bitmapOf(pid),blob=await S.getPhoto(pid).catch(()=>null);
@@ -962,10 +968,10 @@ $("expZip").onclick=()=>busy(async()=>{
   const list=reportList();if(!list.length){expMsg("No entries this month to export.",true);return}
   const zip=new JSZip(),folder=zip.folder("images");let n=0;
   const ORDER=CUR_ROWS.map(r=>r[0]);
-  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Paid (before exchange)","Paid currency","Rate","Image file"]];
+  const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Paid (THB)","Paid currency","Rate","Image file"]];
   for(const e of list){let file="";
     {const names=[];const ps=pids(e);if(ps.length)n++;for(let k=0;k<ps.length;k++){const b=await S.getPhoto(ps[k]).catch(()=>null);if(b){const name=e.date+"_"+pad(n)+(ps.length>1?String.fromCharCode(97+k):"")+(safe(e.note)?"_"+safe(e.note):"")+".jpg";folder.file(name,b);names.push("images/"+name)}}file=names.join("; ")}
-    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount].concat(ORDER.map(c=>e.currency===c?e.amount:""),[e.orig?e.orig.amount:"",e.orig?e.orig.currency:"",e.orig?rateText(e):"",file]))}
+    rows.push([e.date,e.cat,e.note,e.pay,e.currency,e.amount].concat(ORDER.map(c=>e.currency===c?e.amount:""),[e.orig?xv(e).pa:"",e.orig?xv(e).pc:"",e.orig?rateText(e):"",file]))}
   const sums=ORDER.map(c=>{const v=list.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0);return c==="LAK"?Math.round(v):Math.round(v*100)/100});
   rows.push([]);
   rows.push(["Total","","","","","",...sums,"","","",""]);
