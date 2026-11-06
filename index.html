@@ -292,6 +292,8 @@ button,.tabbar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:n
 #splash svg{width:96px;height:96px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
 #splash b{color:#fff;font:700 1.7rem var(--display);letter-spacing:.01em}
 #splash span{color:#A9BBD3;font:600 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;margin-top:-12px}
+.stats{grid-template-columns:1fr!important}
+@media (min-width:860px){#sMonth{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 28px}}
 .tabbar,.bigadd{display:none}
 @media (max-width:859px){
   .offtab{display:none!important}
@@ -359,7 +361,6 @@ var t0=Date.now();window.addEventListener("load",function(){setTimeout(function(
   </section>
 
   <section class="stats" data-sec="home" aria-label="Summary">
-    <div class="stat"><div class="eyebrow">Today</div><div class="curs" id="sToday">₭0</div><div class="mix" id="sTodayTot"></div></div>
     <div class="stat feature"><div class="eyebrow" id="sMonthLbl">This month</div><div class="curs" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
     <div class="stat budgetbar">
       <div class="budgetrow"><span id="budgetText">No monthly budget set</span><button class="linkbtn" id="editBudget" type="button">Set budget</button></div>
@@ -794,7 +795,7 @@ function render(){
   const tdy=entries.filter(e=>e.date===todayISO()).reduce((s,e)=>s+toLAK(e),0);
   const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
   const elapsed=isNow?new Date().getDate():days;
-  showSplit($("sToday"),$("sTodayTot"),entries.filter(e=>e.date===todayISO()));showSplit($("sMonth"),$("sMix"),me);
+  showSplit($("sMonth"),$("sMix"),me);
   
   if(settings.budget){const pct=total/settings.budget*100,left=settings.budget-total;
     $("budgetText").textContent=(left>=0?fmtD(left)+" left of "+fmtD(settings.budget):fmtD(-left)+" over budget of "+fmtD(settings.budget))+" · "+Math.round(pct)+"% used";
