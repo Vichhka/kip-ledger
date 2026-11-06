@@ -2,16 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>ProTracker</title>
-<meta name="theme-color" content="#1F4E8C">
+<meta name="theme-color" content="#0F2A4A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProTracker">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1290x2796.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1179x2556.png">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1206x2622.png">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1320x2868.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1284x2778.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1170x2532.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1125x2436.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash-1242x2688.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash-828x1792.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash-750x1334.png">
 <style>
 /* Layout: one-column pocket ledger — summary band, add/edit card, then breakdown + day-grouped entries; two columns on wide screens */
 :root{
@@ -270,9 +280,43 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 .exbox #exHint{margin:0}
 .field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;width:100%;min-width:0;font:inherit;font-size:16px;resize:vertical;min-height:44px;line-height:1.35}
 .field textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---- app feel: status bar, launch screen, tab bar, no bounce/zoom ---- */
+html,body{overscroll-behavior:none}
+*{-webkit-tap-highlight-color:transparent}
+button,a,label,select,.cat,.chip{touch-action:manipulation}
+button,.tabbar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.sbar{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bar);z-index:60}
+#splash{position:fixed;inset:0;z-index:100;background:#0F2A4A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .35s ease}
+#splash.gone{opacity:0;pointer-events:none}
+#splash svg{width:96px;height:96px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
+#splash b{color:#fff;font:700 1.7rem var(--display);letter-spacing:.01em}
+#splash span{color:#A9BBD3;font:600 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;margin-top:-12px}
+.tabbar,.bigadd{display:none}
+@media (max-width:859px){
+  .offtab{display:none!important}
+  body{padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+  input,select,textarea{font-size:16px}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(4,1fr);background:var(--bar);
+    padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));
+    box-shadow:0 -6px 20px rgba(15,42,74,.18);border-top:1px solid var(--bar-line)}
+  .tabbar button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 4px;cursor:pointer;
+    color:var(--bar-muted);font:600 .68rem var(--body);letter-spacing:.02em;position:relative}
+  .tabbar svg{width:30px;height:30px;padding:3px;box-sizing:border-box;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .tabbar button[aria-current=page]{color:#fff}
+  .tabbar button[aria-current=page]::before{content:"";position:absolute;top:-6px;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--gold)}
+  .tabbar .tadd svg{background:var(--gold);color:var(--bar);border-radius:10px;padding:4px;stroke-width:2.4}
+  .tabbar .tadd{color:var(--bar-muted)}
+  .bigadd{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;padding:16px;background:var(--gold);color:var(--bar);
+    font:700 1.05rem var(--display);cursor:pointer;box-shadow:var(--shadow)}
+}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#C2922B"/><rect x="8" y="17" width="4" height="7" rx="1" fill="#0F2A4A"/><rect x="14" y="12" width="4" height="12" rx="1" fill="#0F2A4A"/><rect x="20" y="8" width="4" height="16" rx="1" fill="#0F2A4A"/></svg><b>ProTracker</b><span>Daily expenses</span></div>
+<script>(function(){var sa=matchMedia("(display-mode: standalone)").matches||navigator.standalone;var sp=document.getElementById("splash");if(!sa){sp.remove();return}
+var t0=Date.now();window.addEventListener("load",function(){setTimeout(function(){sp.classList.add("gone");setTimeout(function(){sp.remove()},400)},Math.max(0,700-(Date.now()-t0)))});setTimeout(function(){if(sp.isConnected){sp.classList.add("gone");setTimeout(function(){sp.remove()},400)}},4000)})()</script>
+<div class="sbar" aria-hidden="true"></div>
 <div class="wrap">
   <header class="appbar">
     <div class="brand">
@@ -288,12 +332,12 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     </div>
   </header>
 
-  <div class="install" id="installTip" hidden>
+  <div class="install" id="installTip" data-sec="home" hidden>
     <span id="installText">Install ProTracker: in Safari tap Share, then <strong>Add to Home Screen</strong>. It then opens with no internet.</span>
     <button class="ghost" id="installBtn" type="button" hidden>Install app</button>
   </div>
 
-  <section class="acct" id="acct" aria-label="Account and sync">
+  <section class="acct" id="acct" data-sec="set" aria-label="Account and sync">
     <div class="acctrow" id="acctOut">
       <div class="accttext"><strong>Sync your phone and laptop</strong><span>Sign in once on each device. Works offline and syncs when you're back online.</span></div>
       <div class="acctbtns"><button class="primary-sm" id="gBtn" type="button">Sign in with Google</button><button class="ghost" id="eBtn" type="button">Use email &amp; password</button></div>
@@ -314,7 +358,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     <div class="msg" id="acctMsg" role="status"></div>
   </section>
 
-  <section class="stats" aria-label="Summary">
+  <section class="stats" data-sec="home" aria-label="Summary">
     <div class="stat"><div class="eyebrow">Today</div><div class="curs" id="sToday">₭0</div><div class="mix" id="sTodayTot"></div></div>
     <div class="stat feature"><div class="eyebrow" id="sMonthLbl">This month</div><div class="curs" id="sMonth">₭0</div><div class="mix" id="sMix"></div></div>
     <div class="stat budgetbar">
@@ -326,10 +370,11 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
       </div>
     </div>
   </section>
+  <button class="bigadd" type="button" data-sec="home" data-go="add">＋ Add expense</button>
 
   <div class="grid">
     <div class="col">
-      <section class="card" id="addCard" aria-label="Add or edit expense">
+      <section class="card" id="addCard" data-sec="add" aria-label="Add or edit expense">
         <h2 id="formTitle">Add an expense</h2>
         <form class="add" id="addForm" autocomplete="off">
           <div class="receipt">
@@ -383,7 +428,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
       </section>
 
 
-      <section class="card" aria-label="Backup">
+      <section class="card" data-sec="set" aria-label="Backup">
         <h2>Settings &amp; backup</h2>
         <div class="rates">
           <span>Exchange rates</span>
@@ -409,7 +454,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 
     <div class="col">
 
-      <section class="card" aria-label="Entries">
+      <section class="card" data-sec="list" aria-label="Entries">
         <div class="tools">
           <h2>Entries</h2>
           <input id="search" placeholder="Search notes" aria-label="Search notes">
@@ -429,6 +474,12 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
     </div>
   </div>
 </div>
+<nav class="tabbar" id="tabbar" aria-label="Sections">
+  <button type="button" data-go="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button type="button" data-go="add" class="tadd"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>Add</button>
+  <button type="button" data-go="list"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="18" r=".6"/></svg>Expenses</button>
+  <button type="button" data-go="set"><svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</button>
+</nav>
 <div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Receipt image"><button type="button" id="viewerClose" aria-label="Close">×</button>
 <button type="button" class="vnav" id="vPrev" aria-label="Previous image">‹</button><button type="button" class="vnav" id="vNext" aria-label="Next image">›</button><span class="vcount" id="vCount"></span></div>
 
@@ -562,6 +613,13 @@ $("exCur").onchange=()=>{if(parseNum($("exRate").value)>0)fromRate();exMark()};
 $("exAmount").addEventListener("input",e=>{if($("exCur").value==="LAK"){const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")}fromEx();exMark()});
 $("amount").addEventListener("input",e=>{if(cur!=="LAK")return;const v=parseNum(e.target.value);if(isFinite(v))e.target.value=Math.round(v).toLocaleString("en-US")});
 $("currency").value=cur;$("exCur").value="THB";drawCats();drawQuick();exMark();
+// ---------- tabs (phone) ----------
+let tab="home";
+function setTab(t,keep){tab=t;document.querySelectorAll("[data-sec]").forEach(el=>el.classList.toggle("offtab",!el.dataset.sec.split(" ").includes(t)));
+  document.querySelectorAll("#tabbar [data-go]").forEach(b=>{if(b.dataset.go===t)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  if(!keep)window.scrollTo(0,0)}
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.go)));
+setTab("home",true);
 function showMsg(t,err){$("msg").textContent=t;$("msg").className="msg"+(err?" err":"")}
 
 // ---------- images + offline receipt reading ----------
@@ -601,11 +659,11 @@ function startEdit(e){
   exMark();
   cat=e.cat;drawCats();$("note").value=e.note||"";$("date").value=e.date;drawPay(e.pay||settings.payMethods[0]);
   $("formTitle").textContent="Edit expense";$("submitBtn").textContent="Save changes";$("cancelEdit").hidden=false;showMsg("");
-  $("addCard").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});render();
+  setTab("add",true);$("addCard").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});render();
 }
 function endEdit(){editing=null;$("formTitle").textContent="Add an expense";$("submitBtn").textContent="Add expense";$("cancelEdit").hidden=true}
 function resetForm(){endEdit();clearPics();$("amount").value="";$("note").value="";$("exAmount").value="";$("exRate").value="";$("exCur").value=BASE;exMark()}
-$("cancelEdit").onclick=()=>{resetForm();$("date").value=todayISO();showMsg("");render()};
+$("cancelEdit").onclick=()=>{resetForm();$("date").value=todayISO();showMsg("");render();setTab("list")};
 
 $("addForm").addEventListener("submit",async ev=>{
   ev.preventDefault();
@@ -628,7 +686,7 @@ $("addForm").addEventListener("submit",async ev=>{
   entries=entries.filter(x=>x.id!==id).concat(entry);
   resetForm();showMsg((ed?"Updated ":"Added ")+fmt(entry.amount,entry.currency)+(entry.orig?" (paid "+fmt(entry.orig.amount,entry.orig.currency)+")":"")+" · "+entry.cat+".");
   const d=new Date(entry.date+"T00:00");if(d.getMonth()!==view.getMonth()||d.getFullYear()!==view.getFullYear())view=new Date(d.getFullYear(),d.getMonth(),1);
-  render();
+  render();if(ed)setTab("list");
 });
 
 // ---------- header controls ----------
