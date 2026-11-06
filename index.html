@@ -128,6 +128,7 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
 
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .tools input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;min-width:0;flex:1 1 160px;font-size:16px}
+.range{display:grid;grid-template-columns:1fr 1fr;gap:8px}.range .field{margin:0}.rquick{display:flex;gap:6px;flex-wrap:wrap}
 .exportpanel{display:grid;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
 .exp{display:grid;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;cursor:pointer}
 .exp span{font-size:.82rem;color:var(--muted)}
@@ -345,9 +346,9 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
           </div>
           <div class="chips" id="quick"></div>
           <div class="exbox" id="exBox">
-            <div class="exhead">Paid with baht exchanged to this currency? <em>(optional)</em></div>
+            <div class="exhead">Paid by changing money? <em>(optional)</em></div>
             <div class="exgrid">
-              <div class="acol"><label for="exCur">Changed from</label><select id="exCur" aria-label="Currency you changed from" disabled><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
+              <div class="acol"><label for="exCur">Changed from</label><select id="exCur" aria-label="Currency you changed from"><option value="LAK">Kip (LAK)</option><option value="THB">Baht (THB)</option><option value="USD">US dollar (USD)</option><option value="CNY">Chinese yuan (CNY)</option></select></div>
               <div class="acol rate"><label for="exRate">Rate</label><input id="exRate" inputmode="decimal" placeholder="—" aria-describedby="rateHint"><span class="ratehint" id="rateHint">1 $ = ? ฿</span></div>
               <div class="acol ex"><label for="exAmount">You paid <em>(auto)</em></label><div class="amountrow"><span class="cur" id="exSym">฿</span><input id="exAmount" inputmode="decimal" placeholder="0" aria-label="Amount you paid"></div></div>
             </div>
@@ -416,6 +417,8 @@ svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
         </div>
         <div class="exportpanel" id="exportPanel" hidden>
           <div class="eyebrow" id="exportTitle">Export this month</div>
+          <div class="range"><div class="field"><label for="rFrom">From</label><input type="date" id="rFrom"></div><div class="field"><label for="rTo">To</label><input type="date" id="rTo"></div></div>
+          <div class="rquick"><button type="button" class="chip" data-r="month">This month</button><button type="button" class="chip" data-r="last">Last month</button><button type="button" class="chip" data-r="year">This year</button></div>
           <button class="exp" id="expPdf" type="button"><strong>PDF report</strong><span>Summary, categories, every entry, and each image on its own pages</span></button>
           <button class="exp" id="expZip" type="button"><strong>Excel + images (.zip)</strong><span>A spreadsheet that opens in Excel, plus a folder of images named to match</span></button>
           <div class="msg" id="expMsg" role="status"></div>
@@ -531,7 +534,7 @@ function drawCats(){$("cats").innerHTML="";const list=CATS.slice();if(cat&&!list
 function drawQuick(){$("quick").innerHTML="";$("curSym").textContent=SYM[cur];QUICK[cur].forEach(v=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent="+"+fmt(v,cur);
   b.onclick=()=>{const now=parseNum($("amount").value)||0;$("amount").value=(now+v).toLocaleString("en-US");$("amount").focus()};$("quick").appendChild(b)})}
 $("currency").onchange=e=>{cur=e.target.value;drawQuick();exDefault();if(parseNum($("exRate").value)>0)fromRate();exMark()};
-function exDefault(){$("exCur").value=BASE}
+function exDefault(){if($("exCur").value===cur&&cur!==BASE)$("exCur").value=BASE}
 const fmtRate=r=>(+r.toPrecision(6)).toLocaleString("en-US",{maximumFractionDigits:4});
 const strength=c=>c==="LAK"?1:DEF_RATES[c]; // stronger currency is quoted first: 1 $ = 32.5 ฿, 1 ฿ = 650 ₭
 const paidIsStrong=(pc,xc)=>strength(pc)>=strength(xc);
@@ -540,7 +543,7 @@ function rateInfo(pc,xc,paid,got){if(!(paid>0&&got>0))return null;
 const BASE="THB"; // money always starts in baht
 function xv(e){ // exchange view: {pc,pa (paid), gc,ga (received)} with baht on the paid side
   if(!e.orig)return null;
-  if(e.currency===BASE&&e.orig.currency!==BASE)return{pc:BASE,pa:e.amount,gc:e.orig.currency,ga:e.orig.amount};
+  if(!e.orig.dir&&e.currency===BASE&&e.orig.currency!==BASE)return{pc:BASE,pa:e.amount,gc:e.orig.currency,ga:e.orig.amount};
   return{pc:e.orig.currency,pa:e.orig.amount,gc:e.currency,ga:e.amount}}
 const rateText=e=>{const v=xv(e);return v?(rateInfo(v.pc,v.gc,v.pa,v.ga)||{text:""}).text:""};
 const paidText=e=>{const v=xv(e);return v?"paid "+fmt(v.pa,v.pc)+" → "+fmt(v.ga,v.gc)+" · "+rateText(e):""};
@@ -550,9 +553,9 @@ function fromRate(){const x=parseNum($("amount").value),r=parseNum($("exRate").v
   if(x>0&&r>0&&pc!==cur){$("exAmount").value=fmtIn(paidIsStrong(pc,cur)?x/r:x*r,pc)}exMark()}
 function fromEx(){const x=parseNum($("amount").value),p=parseNum($("exAmount").value),pc=$("exCur").value;if(x>0&&p>0&&pc!==cur)$("exRate").value=fmtRate(rateInfo(pc,cur,p,x).r)}
 function exMark(){rateHint();$("exSym").textContent=SYM[$("exCur").value];
-  const same=cur===BASE;$("exBox").classList.toggle("off",same);$("exBox").classList.toggle("on",!same&&parseNum($("exAmount").value)>0);
+  const same=$("exCur").value===cur;$("exBox").classList.toggle("off",same);$("exBox").classList.toggle("on",!same&&parseNum($("exAmount").value)>0);
   $("exRate").disabled=$("exAmount").disabled=same;
-  $("exHint").textContent=same?"Paid in baht? Just enter the Amount above. To record baht you exchanged, set the Amount currency above to $, ₭ or ¥.":"Type the rate and \"You paid\" fills in. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals."}
+  $("exHint").textContent=same?"No exchange. To record money you changed, pick the currency you paid with in \"Changed from\" (e.g. ฿ or ₭).":"Type the rate and \"You paid\" fills in, and you can still change it. e.g. $6,380 at 1 $ = 32.5 ฿ → ฿207,350. Only the Amount at the top counts in your totals."}
 $("exRate").addEventListener("input",fromRate);
 $("amount").addEventListener("input",()=>{if(parseNum($("exRate").value)>0)fromRate()});
 $("exCur").onchange=()=>{if(parseNum($("exRate").value)>0)fromRate();exMark()};
@@ -593,7 +596,7 @@ function startEdit(e){
   editing=e;clearPics();pics=pids(e).map(pid=>({pid}));drawPics();
   const v=xv(e);
   if(v&&v.pc===BASE){cur=v.gc;$("currency").value=cur;drawQuick();$("amount").value=fmtIn(v.ga,cur);$("exCur").value=BASE;$("exAmount").value=fmtIn(v.pa,BASE)}
-  else{cur=e.currency;$("currency").value=cur;drawQuick();$("amount").value=fmtIn(e.amount,cur);if(e.orig){$("exCur").value=e.orig.currency;$("exAmount").value=fmtIn(e.orig.amount,e.orig.currency)}else{$("exAmount").value="";exDefault()}}
+  else{cur=e.currency;$("currency").value=cur;drawQuick();$("amount").value=fmtIn(e.amount,cur);if(e.orig){$("exCur").value=e.orig.currency;$("exAmount").value=fmtIn(e.orig.amount,e.orig.currency)}else{$("exAmount").value="";$("exCur").value=BASE}}
   $("exRate").value=v?fmtRate(rateInfo(v.pc,v.gc,v.pa,v.ga).r):"";
   exMark();
   cat=e.cat;drawCats();$("note").value=e.note||"";$("date").value=e.date;drawPay(e.pay||settings.payMethods[0]);
@@ -601,7 +604,7 @@ function startEdit(e){
   $("addCard").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});render();
 }
 function endEdit(){editing=null;$("formTitle").textContent="Add an expense";$("submitBtn").textContent="Add expense";$("cancelEdit").hidden=true}
-function resetForm(){endEdit();clearPics();$("amount").value="";$("note").value="";$("exAmount").value="";$("exRate").value="";exDefault();exMark()}
+function resetForm(){endEdit();clearPics();$("amount").value="";$("note").value="";$("exAmount").value="";$("exRate").value="";$("exCur").value=BASE;exMark()}
 $("cancelEdit").onclick=()=>{resetForm();$("date").value=todayISO();showMsg("");render()};
 
 $("addForm").addEventListener("submit",async ev=>{
@@ -612,7 +615,7 @@ $("addForm").addEventListener("submit",async ev=>{
   const ed=editing;
   const id=ed?ed.id:"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const paidAmt=parseNum($("exAmount").value),paidC=$("exCur").value;
-  const counted=(paidAmt>0&&paidC!==cur)?{amount,currency:cur,orig:{amount:paidAmt,currency:paidC,rate:+rateInfo(paidC,cur,paidAmt,amount).r.toPrecision(6)}}:{amount,currency:cur};
+  const counted=(paidAmt>0&&paidC!==cur)?{amount,currency:cur,orig:{amount:paidAmt,currency:paidC,rate:+rateInfo(paidC,cur,paidAmt,amount).r.toPrecision(6),dir:1}}:{amount,currency:cur};
   const entry={id,...counted,cat,note:$("note").value.trim(),date:$("date").value,pay:$("pay").value,ts:ed?ed.ts:Date.now()};
   const keep=pics.filter(p=>p.pid).map(p=>p.pid),old=ed?pids(ed):[];
   try{
@@ -817,14 +820,29 @@ const safe=s=>String(s||"").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-|-$/g,"")
 async function bitmapOf(id){const b=await S.getPhoto(id).catch(()=>null);if(!b)return null;try{return await createImageBitmap(b)}catch(e){return await new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=URL.createObjectURL(b)})}}
 
 // ---------- export ----------
+const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function setRange(a,b){$("rFrom").value=ymd(a);$("rTo").value=ymd(b);rangeTitle()}
+function monthRange(d){setRange(new Date(d.getFullYear(),d.getMonth(),1),new Date(d.getFullYear(),d.getMonth()+1,0))}
+function getRange(){let a=$("rFrom").value,b=$("rTo").value;if(!a||!b){monthRange(view);a=$("rFrom").value;b=$("rTo").value}if(a>b)[a,b]=[b,a];return{a,b}}
+const pd=k=>{const [Y,Mo,D]=k.split("-").map(Number);return new Date(Y,Mo-1,D)};
+function rangeName(){const {a,b}=getRange(),A=pd(a),B=pd(b);
+  if(a.slice(8)==="01"&&a.slice(0,7)===b.slice(0,7)&&B.getDate()===new Date(B.getFullYear(),B.getMonth()+1,0).getDate())return A.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  if(a.slice(5)==="01-01"&&b.slice(5)==="12-31"&&a.slice(0,4)===b.slice(0,4))return "Year "+a.slice(0,4);
+  const o={day:"numeric",month:"short"};return A.toLocaleDateString("en-GB",a.slice(0,4)===b.slice(0,4)?o:{...o,year:"numeric"})+" – "+B.toLocaleDateString("en-GB",{...o,year:"numeric"})}
+function rangeKey(){const {a,b}=getRange(),n=rangeName();return n.startsWith("Year")?a.slice(0,4):/^[A-Z][a-z]+ \d{4}$/.test(n)?a.slice(0,7):a+" to "+b}
+function rangeDays(){const {a,b}=getRange();const end=Math.min(pd(b),new Date(new Date().setHours(0,0,0,0)));return Math.max(1,Math.round((end-pd(a))/864e5)+1)}
+function rangeTitle(){$("exportTitle").textContent="Export "+rangeName()}
+$("rFrom").onchange=$("rTo").onchange=()=>{rangeTitle();$("expMsg").textContent=""};
+document.querySelectorAll(".rquick .chip").forEach(b=>b.onclick=()=>{const t=new Date(),r=b.dataset.r;
+  if(r==="month")monthRange(view);else if(r==="last")monthRange(new Date(t.getFullYear(),t.getMonth()-1,1));else setRange(new Date(t.getFullYear(),0,1),new Date(t.getFullYear(),11,31));$("expMsg").textContent=""});
 $("exportBtn").onclick=()=>{const p=$("exportPanel");p.hidden=!p.hidden;$("exportBtn").setAttribute("aria-expanded",!p.hidden);
-  $("exportTitle").textContent="Export "+view.toLocaleDateString("en-GB",{month:"long",year:"numeric"});$("expMsg").textContent=""};
+  monthRange(view);$("expMsg").textContent=""};
 function expMsg(t,err){$("expMsg").textContent=t;$("expMsg").className="msg"+(err?" err":"")}
-const reportList=()=>monthEntries().slice().sort((a,b)=>a.date.localeCompare(b.date)||a.ts-b.ts);
+const reportList=()=>{const {a,b}=getRange();return entries.filter(e=>e.date&&e.date>=a&&e.date<=b).sort((x,y)=>x.date.localeCompare(y.date)||x.ts-y.ts)};
 async function busy(fn){$("expPdf").disabled=$("expZip").disabled=true;try{await fn()}catch(e){console.error(e);expMsg("Export failed. Try again.",true)}finally{$("expPdf").disabled=$("expZip").disabled=false}}
 
 $("expPdf").onclick=()=>busy(async()=>{
-  const list=reportList();if(!list.length){expMsg("No entries this month to export.",true);return}
+  const list=reportList();if(!list.length){expMsg("No entries in these dates to export.",true);return}
   expMsg("Building PDF…");
   const W=1240,H=1754,M=90,F="system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans Lao','Lao Sangam MN','Noto Sans Thai',sans-serif",MONO="ui-monospace,Menlo,Consolas,monospace";
   const pages=[];let x,y;
@@ -832,9 +850,8 @@ $("expPdf").onclick=()=>busy(async()=>{
   const txt=(s,px,py,o={})=>{x.font=(o.w||400)+" "+(o.size||22)+"px "+(o.mono?MONO:F);x.fillStyle=o.color||"#18202B";x.textAlign=o.align||"left";
     let t=String(s??"");if(o.max&&x.measureText(t).width>o.max){while(t.length>1&&x.measureText(t+"…").width>o.max)t=t.slice(0,-1);t+="…"}x.fillText(t,px,py)};
   const rule=(py,c)=>{x.fillStyle=c||"#D8DEE6";x.fillRect(M,py,W-2*M,2)};
-  const monthName=view.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
-  const days=new Date(view.getFullYear(),view.getMonth()+1,0).getDate();
-  const el=monthKey(view)===monthKey(new Date())?new Date().getDate():days;
+  const monthName=rangeName();
+  const el=rangeDays();
   let rn=0;const rnum={};list.forEach(e=>{if(pids(e).length)rnum[e.id]=++rn});
   const imgs=[];list.forEach(e=>{const ps=pids(e);ps.forEach((pid,k)=>imgs.push({e,pid,k,n:ps.length}))});rn=imgs.length;
   const sumOf=(arr,c)=>arr.filter(e=>e.currency===c).reduce((s,e)=>s+e.amount,0);
@@ -860,7 +877,7 @@ $("expPdf").onclick=()=>busy(async()=>{
   // totals by currency (no converting)
   section("Totals by currency");
   const thead=(cols)=>{x.fillStyle=HEAD;x.fillRect(M,y-26,W-2*M,40);cols.forEach(c=>txt(c[0].toUpperCase(),c[1]+(c[2]==="right"?-14:14),y,{size:15,w:700,color:NAVY,align:c[2]||"left"}));y+=48};
-  thead([["Currency",M],["Month total",M+640,"right"],["Daily average",W-M,"right"]]);
+  thead([["Currency",M],["Total",M+640,"right"],["Daily average",W-M,"right"]]);
   CUR_ROWS.forEach(([c,label],i)=>{const v=sumOf(list,c);const col=v?CURCOL[c]:"#9AA4AE";
     if(i%2)x.fillStyle=ZEBRA,x.fillRect(M,y-32,W-2*M,50);
     const bw=badge(c,M+14,y);txt(label,M+24+bw,y,{size:23,w:v?600:400,color:v?INK:"#9AA4AE"});
@@ -961,11 +978,11 @@ $("expPdf").onclick=()=>busy(async()=>{
   const kpt=595.28/W;
   for(const o of overlays){const url=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(o.blob)});
     pdf.setPage(o.page+1);pdf.addImage(url,"JPEG",o.x*kpt,o.y*kpt,o.w*kpt,o.h*kpt,undefined,"FAST")}
-  await deliver("Expense report "+monthKey(view)+".pdf",pdf.output("blob"),expMsg);
+  await deliver("Expense report "+rangeKey()+".pdf",pdf.output("blob"),expMsg);
 });
 
 $("expZip").onclick=()=>busy(async()=>{
-  const list=reportList();if(!list.length){expMsg("No entries this month to export.",true);return}
+  const list=reportList();if(!list.length){expMsg("No entries in these dates to export.",true);return}
   const zip=new JSZip(),folder=zip.folder("images");let n=0;
   const ORDER=CUR_ROWS.map(r=>r[0]);
   const rows=[["Date","Category","Note","Paid with","Currency","Amount","Kip (LAK)","Baht (THB)","Yuan (CNY)","Dollar (USD)","Paid (THB)","Paid currency","Rate","Image file"]];
@@ -977,8 +994,8 @@ $("expZip").onclick=()=>busy(async()=>{
   rows.push(["Total","","","","","",...sums,"","","",""]);
   rows.push([]);
   CUR_ROWS.forEach(([c,label],i)=>rows.push([label,"","","",c,sums[i]]));
-  zip.file("Expenses "+monthKey(view)+".csv",csvOf(rows));expMsg("Packing ZIP…");
-  await deliver("Expenses "+monthKey(view)+".zip",await zip.generateAsync({type:"blob"}),expMsg);
+  zip.file("Expenses "+rangeKey()+".csv",csvOf(rows));expMsg("Packing ZIP…");
+  await deliver("Expenses "+rangeKey()+".zip",await zip.generateAsync({type:"blob"}),expMsg);
 });
 
 // ---------- backup / restore ----------
